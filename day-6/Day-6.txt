@@ -1,0 +1,58 @@
+Steps [Ubuntu-22.04]:
+Note: This entire setup will be done in one single Ubuntu machine.
+1. ===== Setup Static IP: =====
+
+2. ===== Install the Docker engine: =====
+
+3. ===== Install kubectl for Linux: =====
+# curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+# curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+# echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+# sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+# kubectl version --client
+
+4. ===== Setup Kind: =====
+# [ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.26.0/kind-linux-amd64
+# chmod +x ./kind
+# sudo mv ./kind /usr/local/bin/kind
+
+5. ==== Setup single node kubernetes cluster ====
+# kind create cluster --image kindest/node:v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f --name cricbuzz-cluster
+# kind get clusters => To list the clusters
+# kubectl cluster-info --context kind-cricbuzz-cluster
+# kubectl get nodes
+# kubectl config get-contexts => To check which k8s cluster we are using right now. The "*" denotes the current context.
+# kubectl config use-context kind-cricbuzz-cluster => Switch to this cluster if we are currently in another cluster.
+# kubectl config get-contexts
+
+6. ===== Setup multi-node cluster using kind: =====
+# vim multi-node-cluster.yml
+============================================================================
+# three node (two workers) cluster config
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 30001
+    hostPort: 30001
+- role: worker
+- role: worker
+============================================================================
+Note: Here we are using '30001' as we will expose the app using this NodePort.
+# kind create cluster --name espn-cluster --config multi-node-cluster.yml
+OR
+# kind create cluster --image kindest/node:v1.33.1@sha256:050072256b9a903bd914c0b2866828150cb229cea0efe5892e2b644d5dd3b34f --name espn-cluster --config multi-node-cluster.yml => Setup kubernetes cluster with specific node image.
+# kind get clusters => List all running kubernetes clusters.
+# kubectl cluster-info --context kind-espn-cluster
+# kubectl config get-contexts => To check which k8s cluster we are using right now. The "*" denotes the current context.
+# kubectl config use-context kind-cricbuzz-cluster => Switch to this cluster if we are currently in another cluster.
+# kubectl config get-contexts
+# kubectl get nodes => These are nothing but docker containers.
+# docker container ls
+# kubectl get nodes -o wide
+
+7. ===== Delete the cluster =====
+# kind get clusters
+# kind delete cluster --name cricbuzz-cluster (Deleted single node k8s cluster)
+# kind get clusters

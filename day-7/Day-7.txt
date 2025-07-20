@@ -1,0 +1,27 @@
+# kind get clusters => We just have one multi-node cluster created previously. 
+# kubectl run nginx --image nginx:latest
+# vim pod.yml
+=====================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    env: demo
+    type: frontend
+spec:
+  containers:
+    - name: nginx-ctrx
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+=====================================================================
+# kubectl delete pod nginx
+# kubectl apply -f pod.yml
+# kubectl describe pod nginx-pod => It will helps us to figure out the issue with pod not getting created.
+# kubectl edit pod nginx-pod => To edit this pod if we wish to. This will get apply automatically once we save it.
+# kubectl exec -it nginx-pod -- bash => To go inside the pod.
+# kubectl run nginx --image=nginx:latest --dry-run=client -o yaml> pod2.yml ==> To create pod yaml file.
+# kubectl get pods nginx-pod --show-labels
+# kubectl get pods -o wide
+# kubectl get nodes -o wide

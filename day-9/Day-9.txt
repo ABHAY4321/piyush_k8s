@@ -1,0 +1,70 @@
+======== NodePort Service ===========
+# vim nodeport.yml
+================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodeport-svc
+  labels:
+    env: demo
+spec:
+  type: NodePort
+  selector:
+    env: demo
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30002
+      protocol: TCP
+================================
+# kubectl apply -f nodeport.yml
+# kubectl get svc
+# kubectl describe svc/nodeport-svc
+# kubectl get endpoints => See endpoints corresponding to each services.
+==> curl <node-IP>:30002 ==> To access this app.
+==> curl <machine-IP>:30002 => To access it in web browser from other machines.
+
+======== ClusterIP Service ===========
+# vim clusterip.yml
+================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-svc
+  labels:
+    env: demo
+spec:
+  type: ClusterIP
+  selector:
+    env: demo
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+================================
+# kubectl apply -f clusterip.yml
+# kubectl get svc
+# kubectl describe svc/cluster-svc
+# kubectl get endpoints
+
+======== LoadBalancer Service ===========
+# vim lb.yml
+================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: lb-svc
+  labels:
+    env: demo
+spec:
+  type: LoadBalancer
+  selector:
+    env: demo
+  ports:
+    - port: 80
+      protocol: TCP
+================================
+# kubectl apply -f lb.yml
+# kubectl get svc
+# kubectl describe svc/lb-svc
+# kubectl get endpoints

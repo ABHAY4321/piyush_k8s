@@ -1,0 +1,106 @@
+========= Replication Controller ========
+# vim rc.yml
+=================================
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx-rc
+  labels:
+    env: demo
+spec:
+  replicas: 3
+  template:
+    metadata:
+      name: nginx
+      labels:
+        env: demo
+    spec:
+      containers:
+        - name: nginx-ctrx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+======================================
+# kubectl apply -f rc.yml
+# kubectl get rc/nginx-rc
+# kubectl describe rc/nginx-rc
+# kubectl get pods -o wide
+# kubectl describe pod <pod-name> => Controlled by ReplicationController.
+# kubectl delete rc/nginx-rc
+
+============ Replica Set ====================
+# vim rs.yml
+===============================================
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-rs
+  labels:
+    env: demo
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      env: demo
+  template:
+    metadata:
+      name: nginx
+      labels:
+        env: demo
+    spec:
+      containers:
+        - name: nginx-ctrx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+===============================================
+# kubectl apply -f rs.yml
+# kubectl get rs/nginx-rs
+# kubectl describe rs/nginx-rs
+# kubectl get pods -o wide
+# kubectl describe pod <pod-name> => Controlled by ReplicaSet.
+# kubectl edit rs/nginx-rs => It will show the last applied config. We can make modification live here, like changed replicas to 6.
+OR
+# kubectl edit rs nginx-rs
+# kubectl get pods -o wide => Now we have six pods.
+# kubectl scale --help
+# kubectl delete rs/nginx-rs
+
+============= Deployment ================
+# vim deployment.yml
+========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    env: demo
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      env: demo
+  template:
+    metadata:
+      name: nginx
+      labels:
+        env: demo
+    spec:
+      containers:
+        - name: nginx-ctrx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+========================================
+# kubectl apply -f deployment.yml
+# kubectl get deployment/nginx-deployment
+# kubectl describe deployment/nginx-deployment
+# kubectl get pods -o wide
+# kubectl describe pod <pod-name> => Controlled by ReplicaSet.
+# kubectl set image deployments/nginx-deployment nginx-ctrx=nginx:1.9.1 => Here, we are changing the nginx container image where "nginx-ctrx" is container name inside the pod and "nginx:1.9.1" will be the new container image.
+# kubectl describe deployments/nginx-deployment => Container image is updated now.
+# kubectl rollout history deployment/nginx-deployment => See the deployment rollout history. Currently we have two rollout history. Fisr with "nginx:latest" image and second with "nginx:1.9.1" image.
+# kubectl rollout undo deployment/nginx-deployment => Rolling back to previous version.
+# kubectl describe deployments/nginx-deployment => Now container image is changed to "nginx:latest" from "nginx:1.9.1".
+# kubectl rollout history deployment/nginx-deployment
+# kubectl create deployment deployment/nginx-new --image=nginx --dry-run=client -o yaml > new-deployment.yml => Create a deployment file if we don't remember it.
