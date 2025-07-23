@@ -1,0 +1,72 @@
+# vim pod.yml
+====================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  labels:
+    name: myapp-pod
+spec:
+  containers:
+    - name: myapp-container
+      image: busybox:1.28
+      command: ['sh', '-c', 'echo the app is running && sleep 3600']
+      env:
+        - name: FIRSTNAME
+          value: "Abhay"
+  initContainers:
+    - name: init-myservice
+      image: busybox:1.28
+      command: ['sh', '-c']
+      args: ['until nslookup myservice.default.svc.cluster.local ; do echo Waiting for service to be up ; sleep 2 ; done']
+===========================================================================================================================
+# kubectl apply -f pod.yml
+# kubectl get pods
+# kubectl describe pod myapp
+# kubectl logs pod/myapp -c init-myservice => Currently nslookup is failing as it can't find the service "myservice".
+# kubectl create deployment nginx-deploy --image=nginx --port 80
+# kubectl get deployments
+# kubectl get pods
+# kubectl expose deployment nginx-deploy --name myservice --port 80
+# kubectl get pods => Pod is running now as soon as we created the service "myservice".
+# kubectl logs pod/myapp -c init-myservice => As "myservice" got created, it is getting resolved now. Hence our app is running.
+# kubectl exec -it myapp -- printenv => To check env varibale we defined in manifest file.
+# kubectl exec -it myapp -- sh
+# echo $FIRSTNAME => Abhay
+# exit
+# vim pod2.yml
+=====================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  labels:
+    name: myapp-pod
+spec:
+  containers:
+    - name: myapp-container
+      image: busybox:1.28
+      command: ['sh', '-c', 'echo the app is running && sleep 3600']
+      env:
+        - name: FIRSTNAME
+          value: "Abhay"
+  initContainers:
+    - name: init-myservice
+      image: busybox:1.28
+      command: ['sh', '-c']
+      args: ['until nslookup myservice.default.svc.cluster.local ; do echo Waiting for service to be up ; sleep 2 ; done']
+
+    - name: init-mydb
+      image: busybox:1.28
+      command: ['sh', '-c']
+      args: ['until nslookup mydb.default.svc.cluster.local ; do echo Waiting for service to be up ; sleep 2 ; done']
+=======================================================================================================================
+# kubectl apply -f pod2.yml => Error: App is already running.
+# kubectl delete pod myapp
+# kubectl apply -f pod2.yml
+# kubectl get pods => Again it is not in running state due to failing to resolve the service "mydb".
+# kubectl create deployment mydb --image redis --port 80
+# kubectl get pods
+# kubectl expose deployment mydb --name mydb --port 80
+# kubectl get pods => Now pod got initialized initially and now running.
+# kubectl logs pods/myapp -c init-mydb => As "mydb" got created, it is getting resolved now. Hence our app is running.
