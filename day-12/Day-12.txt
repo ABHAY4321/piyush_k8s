@@ -1,0 +1,65 @@
+============ DaemonSet ===========
+# vim ds.yml
+======================================================
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nginx-ds
+  labels:
+    env: demo
+spec:
+  template:
+    metadata:
+      labels:
+        env: demo
+      name: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+  selector:
+    matchLabels:
+      env: demo
+======================================================
+# kubectl apply -f ds.yml
+# kubectl get ds
+# kubectl describe ds/nginx-ds
+# kubectl get pods
+# kubectl describe pod <pod-name> => Controlled By:  DaemonSet/nginx-ds
+# kubectl get nodes
+# kubectl delete pod <pod-name>
+# kubectl get pods => Another pod got created successfully.
+# kubectl get ds -A => Check all daemon set in all the namespaces.
+# kubectl get all -n kube-system => It has "kube-proxy" as daemon set which is preset in all the nodes.
+# kubectl get all -n default
+
+========== Cronjob ===========
+# vim cronjob.yml
+================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox:1.28
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+================================================================
+# kubectl get all -n default
+# kubectl get cronjobs.batch
+# kubectl describe cronjobs.batch
+# kubectl get pods
+# kubectl logs <pod-name> => To see the command output provided in manifest file.
