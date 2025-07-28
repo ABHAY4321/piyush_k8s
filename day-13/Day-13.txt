@@ -1,0 +1,93 @@
+==> Scheduler is responsible to schedule any pods.
+# kubectl get pods -n kube-system | grep scheduler => Scheduler is itself a pod. So who schedule it? Answer is there are few static pods in kubernetes which are managed by "kubelet" in control-plane. 
+# kubectl get pods -n kube-system -o wide | grep scheduler => To check on which node this scheduler is running.
+# docker exec -it espn-cluster-control-plane bash => SSH into control plane node.
+root@espn-cluster-control-plane:/# ps -ef | grep kubelet
+root@espn-cluster-control-plane:/# cd /etc/kubernetes/manifests/
+root@espn-cluster-control-plane:/etc/kubernetes/manifests# ls -ltr => Here we have manifest files of all the static pods.
+root@espn-cluster-control-plane:/etc/kubernetes/manifests# mv kube-scheduler.yaml /tmp
+==> Here we have moved scheduler manifest from this location. Now go to another terminal and perform below steps-
+# kubectl get pods -n kube-system | grep scheduler => Scheduler pod is missing.
+# kubectl get pods -n kube-system => Confirm the same.
+# kubectl run nginx --image=nginx
+# kubectl get pods => Status: Pending
+# kubectl describe pod nginx => Here we don't see any logs as the pod is not scheduled yet. Node: <none> and Status: Pending.
+==> Now go back to control plane's node and move back the scheduler manifest file to original directory.
+root@espn-cluster-control-plane:/etc/kubernetes/manifests# mv /tmp/kube-scheduler.yaml .
+root@espn-cluster-control-plane:/etc/kubernetes/manifests# ls -ltr => Now we have scheduler manifest here.
+==> If we check, the pod will be in 'running' state from 'pending'.
+# kubectl get pods -n kube-system | grep scheduler => Scheduler pod is running.
+# kubectl get pods => Status: Running
+
+===== Manual Scheduling =====
+# kubectl run nginx --image=nginx -o yaml > pod.yml
+# vim pod.yml
+================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nginx
+  name: nginx
+  namespace: default
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+  nodeName: espn-cluster-worker
+================================================
+==> Here we have manually specified the node name on which it will be scheduled manually.
+# docker exec -it espn-cluster-control-plane bash
+root@espn-cluster-control-plane:/# cd /etc/kubernetes/manifests/
+# root@espn-cluster-control-plane:/etc/kubernetes/manifests# mv kube-scheduler.yaml /tmp
+==> Use CTRL+D to exit.
+# kubectl get pods -n kube-system | grep scheduler => No scheduler is running.
+# kubectl apply -f pod.yml
+# kubectl get pods => Status: Running
+# kubectl get pods -o wide ==> It is scheduled on specified node even though no scheduler is running.
+==> Now we will move back scheduler manifest file to its original location.
+# docker exec -it espn-cluster-control-plane bash
+root@espn-cluster-control-plane:/etc/kubernetes/manifests# cd /etc/kubernetes/manifests/
+# root@espn-cluster-control-plane:/# mv /tmp/kube-scheduler.yaml .
+==> Use CTRL+D to exit.
+# kubectl get pods -n kube-system | grep scheduler => Scheduler is running now.
+
+===== Labels and Selectors =====
+# vim pod.yml
+=============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nginx
+    tier: frontend
+    type: app1
+  name: nginx
+  namespace: default
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+  nodeName: espn-cluster-worker
+=============================================
+# kubectl apply -f pod.yml
+# kubectl get pods --show-labels
+# vim pod2.yml
+==============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: redis
+    tier: backend
+  name: redis
+  namespace: default
+spec:
+  containers:
+  - image: redis
+    name: redis-container
+==============================================
+# kubectl apply -f pod2.yml
+# kubectl get pods --show-labels
+# kubectl get pods --selector tier=frontend ==> Here selector will match the lables with the pod labels.
+# kubectl get pods --selector tier=backend
