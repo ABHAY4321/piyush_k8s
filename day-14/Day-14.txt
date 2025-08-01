@@ -1,0 +1,78 @@
+=========== Taint and toleration =========
+==> Taint: on node, Tolartaion: on pod
+# kubectl get nodes
+O/P: 
+NAME                         STATUS   ROLES           AGE   VERSION
+espn-cluster-control-plane   Ready    control-plane   12d   v1.32.0
+espn-cluster-worker          Ready    <none>          12d   v1.32.0
+espn-cluster-worker2         Ready    <none>          12d   v1.32.0
+# kubectl describe node espn-cluster-control-plane | grep -i taint
+# kubectl describe node espn-cluster-worker | grep -i taint
+# kubectl describe node espn-cluster-worker2 | grep -i taint
+# kubectl taint node espn-cluster-worker gpu=true:NoSchedule
+# kubectl taint node espn-cluster-worker2 gpu=true:NoSchedule
+# kubectl describe node espn-cluster-worker | grep -i taint
+# kubectl describe node espn-cluster-worker2 | grep -i taint
+# kubectl run nginx --image=nginx
+# kubectl get pods -o wide => Status: Pending
+# kubectl describe pod nginx
+# kubectl run redis --image=redis --dry-run=client -o yaml > redis.yml
+# vim redis.yml
+==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: redis
+  name: redis
+spec:
+  containers:
+  - image: redis
+    name: redis
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  tolerations:
+    - key: "gpu"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+status: {}
+==========================================================
+# kubectl apply -f redis.yml
+# kubectl get pods -o wide => Status: Running
+# kubectl taint node espn-cluster-worker gpu=true:NoSchedule-	==> Removing taint from node.
+# kubectl describe node espn-cluster-worker | grep -i taint
+# kubectl get pods -o wide => "nginx" pod is running now from pending.
+
+========== Node Selector ===========
+# kubectl run nginx-new --image=nginx --dry-run=client -o yaml > new_nginx.yml
+# vim new_nginx.yml
+=============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx-new
+  name: nginx-new
+spec:
+  containers:
+  - image: nginx
+    name: nginx-new
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  nodeSelector:
+    gpu: "false"
+status: {}
+=============================================
+# kubectl apply -f new_nginx.yml
+# kubectl get pods -o wide => Status: Pending
+# kubectl describe pod nginx-new
+# kubectl get nodes --show-labels => It didn't find any node with matching label "gpu=false". That is why Pod is not schedule.
+# kubectl label node espn-cluster-worker gpu=false
+# kubectl get nodes --show-labels
+# kubectl get pods -o wide => Status: Running
+Note: Using taint & toleration, node decide what kind of pod can be scheduled here. Using node scheduler, pod decide on which node it will be schedule.
