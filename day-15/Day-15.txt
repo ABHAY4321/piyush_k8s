@@ -1,0 +1,111 @@
+======== Node Affinity ========
+
+================ requiredDuringSchedulingIgnoredDuringExecution ===============
+# vim affinity.yml
+==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: redis
+  name: redis
+spec:
+  containers:
+  - image: redis
+    name: redis
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                  - ssd
+status: {}
+==========================================================
+# kubectl apply -f affinity.yml
+# kubectl get pods -o wide => Status: Pending
+# kubectl describe pod redis
+==> As no nodes has matching lables and we are using "requiredDuringSchedulingIgnoredDuringExecution", the pod will stuck in pending state.
+# kubectl get nodes
+O/P: 
+NAME                         STATUS   ROLES           AGE   VERSION
+espn-cluster-control-plane   Ready    control-plane   12d   v1.32.0
+espn-cluster-worker          Ready    <none>          12d   v1.32.0
+espn-cluster-worker2         Ready    <none>          12d   v1.32.0
+# kubectl label nodes espn-cluster-worker disktype=ssd
+# kubectl get nodes --show-labels
+# kubectl get pods -o wide => Status: Running
+
+================ preferredDuringSchedulingIgnoredDuringExecution ===============
+# vim affinity2.yml
+=================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: redis
+  name: redis-new
+spec:
+  containers:
+  - image: redis
+    name: redis
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 1
+          preference:
+            matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                   - hdd
+status: {}
+=================================================
+# kubectl get pods -o wide => Status: Running.
+==> Even though it doesn't have matching labels, it got scheduled in a node as we are using "preferredDuringSchedulingIgnoredDuringExecution" here.
+
+# kubectl label nodes espn-cluster-worker disktype-	==> We have removed the label.
+# kubectl get nodes --show-labels
+# kubectl get pods -o wide => Pod "redis" is still running. Affinity won't affect existing pods. It affects only the new pod.
+# vim affinity3.yml
+==========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: redis
+  name: redis-3
+spec:
+  containers:
+  - image: redis
+    name: redis
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: disktype
+                operator: Exists
+status: {}
+==========================================================
+# kubectl apply -f affinity3.yml
+# kubectl get pods -o wide => Status: Pending ==> For "redis-3" pod.
+# kubectl describe pod redis-3 => No node has any label with key "disktype". That is why it is in pending state. Here value won't matter, only key will matter.
+# kubectl label node espn-cluster-worker2 disktype=
+# kubectl get nodes --show-labels
+# kubectl get pods -o wide => Status: Running ==> For "redis-3" pod. Here one of the node has the label with key "disktype".
+Note: In case of taint & toleration, a pod can be scheduled on node with matching taint. If any node doesn't have a taint, this pod can get scheduled on that node as well if scheduler will check it. To avoid this & schedule a pod on a specific node, we use taint & toleraion in conjuction with node affinity.
