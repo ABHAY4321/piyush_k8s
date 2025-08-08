@@ -1,0 +1,79 @@
+=============== Horizontal Pod Auroscaling (HPA) =============
+# kubectl get nodes
+# kubectl get pods -n kube-system => "metrics-server" pod is running from the previous lab.
+# vim deploy.yml
+==================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-apache
+spec:
+  selector:
+    matchLabels:
+      run: php-apache
+  template:
+    metadata:
+      labels:
+        run: php-apache
+    spec:
+      containers:
+      - name: php-apache
+        image: registry.k8s.io/hpa-example
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 500m
+          requests:
+            cpu: 200m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-apache
+  labels:
+    run: php-apache
+spec:
+  ports:
+  - port: 80
+  selector:
+    run: php-apache
+==================================================================
+# kubectl apply -f deploy.yml
+# kubectl get pods => Status: Running
+# kubectl get svc => Type: ClusterIP
+# kubectl autoscale deployment php-apache --cpu-percent=50 --min=1 --max=5 => Create HPA
+# kubectl get hpa
+
+NAME         REFERENCE               TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache   cpu: 0%/50%   1         5         1          34s
+
+Note: It takes few seconds before showing CPU percentage from 'unknown'.
+# kubectl run -i --tty load-generator --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://php-apache; done" => To increase the load. Run this in another terminal.
+# kubectl get hpa --watch => We can see the increase in CPU usage.
+# kubectl get hpa => Now no. of replicase is increasing.
+
+Note: Once we stop that command of load generator, CPU suage gets decrease and hence the replicas.
+
+============== Alternative of 'kubectl autoscale deployment php-apache --cpu-percent=50 --min=1 --max=5' ====================
+# vim hpa.yml
+====================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+=======================================================================
