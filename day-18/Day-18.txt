@@ -1,0 +1,114 @@
+======== Liveness& Readiness Probe ===========
+========= liveness command =========
+# vim liveness-c.yml
+===================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: liveness
+  name: liveness-exec
+spec:
+  containers:
+  - name: liveness
+    image: registry.k8s.io/busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -f /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+===================================================
+# kubectl apply -f liveness-c.yml
+# watch 'kubectl get pods'
+# kubectl describe pod liveness-exec => Check for failing liveness probe.
+
+=========== liveness-http =============
+# vim liveness-http.yml 
+===========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello
+spec:
+  containers:
+  - name: liveness
+    image: registry.k8s.io/e2e-test-images/agnhost:2.40
+    args:
+    - liveness
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 3
+      periodSeconds: 3
+===========================================================
+# kubectl apply -f liveness-http.yml
+# watch 'kubectl get pods'
+# kubectl describe pod hello => Check for failing liveness probe.
+# kubectl exec -it hello -- sh
+/ # cat /healthz => cat: can't open '/healthz': No such file or directory
+/ # touch /healthz
+==> After doing all these, it still fails as there is no such endpoint present here.
+
+=========== liveness-tcp =============
+# vim liveness-tcp.yml
+=======================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tcp-pod
+  labels:
+    app: tcp-pod
+spec:
+  containers:
+  - name: goproxy
+    image: registry.k8s.io/goproxy:0.1
+    ports:
+    - containerPort: 8080
+    livenessProbe:
+      tcpSocket:
+        #port: 8080
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 5
+=======================================================
+# kubectl apply -f liveness-tcp.yml
+# watch 'kubectl get pods'
+# kubectl describe pod tcp-pod => Check for failing liveness probe. It fails if 'port' under 'tcpSocket' inside 'livenessProbe' has other than '8080'.
+# kubectl get pod tcp-pod -o yaml => We can see, we have other parameters inside 'livenessProbe'. Like-failureThreshold,successThreshold etc. Apart from that we can see that it has default taint added by kubernetes so that healthy pod can be scheduled on healthy node.
+
+=========== liveness-readiness-http =============
+# vim liveness-http.yml 
+===========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello
+spec:
+  containers:
+  - name: liveness
+    image: registry.k8s.io/e2e-test-images/agnhost:2.40
+    args:
+    - liveness
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 3
+      periodSeconds: 3
+	readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 15
+      periodSeconds: 10
+===========================================================
+# kubectl apply -f liveness-http.yml
+# watch 'kubectl get pods'
+# kubectl describe pod hello => Check for failing liveness & readiness probe.
