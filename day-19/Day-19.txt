@@ -1,0 +1,79 @@
+=============== ConfigMap ================
+# vim pod.yml
+=========================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    name: MyApp
+spec:
+  containers:
+    - name: myapp-container
+      image: busybox:1.28
+      command: ['sh', '-c', 'echo the app is running && sleep 3600']
+      env:
+        - name: FIRSTNAME
+          value: "Abhay"
+==========================================================================
+# kubectl apply -f pod.yml
+# kubectl get pods
+# kubectl exec -it myapp-pod -- sh
+/ # echo $FIRSTNAME => O/P: Abhay
+/ # Exit
+# kubectl create cm app-cm --from-literal=firstname=Abhay --from-literal=secondname=Singh
+# kubectl get cm
+# kubectl describe cm/app-cm
+# vim pod2.yml
+================================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod2
+  labels:
+    name: MyApp
+spec:
+  containers:
+    - name: myapp-container2
+      image: busybox:1.28
+      command: ['sh', '-c', 'echo the app is running && sleep 3600']
+      env:
+        - name: FIRSTNAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-cm
+              key: firstname
+
+        - name: SECONDNAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-cm
+              key: secondname
+================================================================================
+# kubectl apply -f pod2.yml
+# kubectl get pods
+# kubectl exec -it myapp-pod2 -- sh
+/ # echo $FIRSTNAME => O/P: Abhay
+/ # echo $SECONDNAME => O/P: Singh
+/ # exit
+# kubectl describe pod myapp-pod2
+========================================================================================
+Environment:
+      FIRSTNAME:   <set to the key 'firstname' of config map 'app-cm'>   Optional: false
+      SECONDNAME:  <set to the key 'secondname' of config map 'app-cm'>  Optional: false
+========================================================================================
+# kubectl create cm app-cm2 --from-literal=firstname=Abhay --from-literal=secondname=Singh -o yaml > cm.yml
+# vim cm.yml
+====================================================
+apiVersion: v1
+data:
+  firstname: Abhay
+  secondname: Singh
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2025-08-13T15:40:47Z"
+  name: app-cm2
+  namespace: default
+  resourceVersion: "181410"
+  uid: 8ef11105-d01b-4b0e-bf9f-a36053981149
+====================================================

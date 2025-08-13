@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  firstname: Abhay
+  secondname: Singh
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2025-08-13T15:40:47Z"
+  name: app-cm2
+  namespace: default
+  resourceVersion: "181410"
+  uid: 8ef11105-d01b-4b0e-bf9f-a36053981149
