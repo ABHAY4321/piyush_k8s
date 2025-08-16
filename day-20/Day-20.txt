@@ -1,0 +1,12 @@
+========== SSH ==============
+==> Here the client create public and private key using utility 'ssh-keygen'. Client keeps private key and sends the public key to the server during 'ssh-copy-id'. 
+==> Server encrypt the packet using public key and sends it back to the client.
+==> Client uses its private key to decrypt the packet.
+ 
+========== SSL/TLS ==========
+==> In public network, Server send CSR (Certificate Sign Request) to publi CA (Certificate Authority), like Symentac, Digicert etc. 
+==> CA validate that request & send back the public and private certificate to the server. 
+==> Server keeps private certificate and send the public certificate to the end user's browser during TLS handshake. 
+==> After the TLS handshake, actual HTTP/HTTPS request send/receive.
+==> In private network (Like within office premise), Server send CSR (Certificate Sign Request) to custom CA (Certificate Authority) which is hosted withon office or organization. They don't use public CA here. Reset operaton remains same.
+==> Here 'openssl' is used for the certificate generation.
