@@ -1,0 +1,10 @@
+==> When we run any command, for ex- 'kubectl get pods', we don't pass additional parameters, like authentication, authorization. Here it takes the reference from 'config' file inside ''kube' directory.
+ls /home/abhay/.kube/ => config
+# cat /home/abhay/.kube/config => We can see certificates, users, clusters, contexts etc here.
+# docker ps | grep control => Get the control plane node => espn-cluster-control-plane
+# docker exec -it espn-cluster-control-plane bash
+# root@espn-cluster-control-plane:/# cd /etc/kubernetes/manifests/
+# root@espn-cluster-control-plane:/# ls -ltr => We can see manifet files of static pods, like apiserver, etcd etc.
+# root@espn-cluster-control-plane:/# cat kube-apiserver.yaml => Here we can see the paramerets which will be passed during 'api-server' pod execution.
+# root@espn-cluster-control-plane:/# cd /etc/kubernetes/pki/
+# root@espn-cluster-control-plane:/etc/kubernetes/pki# ls -ltr => It contains certificates, keys etc for authentication between different kubernetes components.
