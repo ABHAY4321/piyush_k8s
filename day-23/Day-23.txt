@@ -1,0 +1,226 @@
+# openssl genrsa -out rupali.key 2048 => To generate private key.
+# cat rupali.key
+# openssl req -new -key rupali.key -out rupali.csr -subj "/CN=rupali" => To generate CSR (Certificate Sign request)
+# cat rupali.csr
+# cat rupali.csr | base64 | tr -d "\n" => Get encoded CSR. Provide it in "request" section in below yaml.
+# vim csr.yml
+=====================================================================================================================
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: rupali
+spec:
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1ZqQ0NBVDRDQVFBd0VURVBNQTBHQTFVRUF3d0djblZ3WVd4cE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRgpBQU9DQVE4QU1JSUJDZ0tDQVFFQW1aV2xuK2x6aytCbjlYU1d5RU96b01IYlozSmVLRHZnUEhRaVdMazFyY0VvCkswcW5ucjF1MmF4bmlMdWozbHduNFFQVFY5ZUFPMGlsdGFjOVQ2dGJHaXp1Y1J3ZVJQSE94T3VUelJta1RCR0YKRk1IQW5haXpiWmQzRjJkck00c3VodURzWm1OZmUrMXhqYTU0RmxiRXZ1enZ4TThVdWlSRXdXN1ZQUnQ5OUdPQwpGQnpucTloTXFjT3YwbUdCdlF3RkZXd3JSaFlwQzdvUHhhNkZHU2hGMXFQeXNSTS9qWjdSOUg0MGtxdHZmSVJvCm81eTlDeFJDbkRVNUZudDUveUVTMXM1YVBFVDhjeVRXeG1qVjlyVnNHeWRwWDFHbG1OZ1NST3ZRcVFlTEllSU0KNitFM252OXRQby9lV2E0SGRLNU50UnkyaitGWmdOWE5jWGNpd2ptVlJRSURBUUFCb0FBd0RRWUpLb1pJaHZjTgpBUUVMQlFBRGdnRUJBQ2QzQ3VXRGhXMHlUd3pkSGFNTzlQcFNjZXdnQkNJeEh4RG5jOWRnN2tDallLRU9mL01YCkRscWxXbXJDQWI5Vzk1MVllUWk2N2V3VXl4aGtQVDFOeUZPVkFVSDRNY2FjNjlUZU85Y3JyVDUvWG0zZVVvQ0YKRnAvY2ZUZXVVSXhqWG52VnVzR2s0S0lLUTFRLzBPRGxQS3hQQndVMjhDZjhRNUowT3k0UWwxeE1CZkhBWHp2VAo0NlB0VVQ5R2d3Z3FKaHhZTTdiMVdPZGZ4dHk5eWdISmVYS3dCNVZKYmhuYU1TR1h2Yk1YUW9ETUo2QXBNL25sCjBjOEFocHhCa05yRVdjb05ta21VdUhnT0EvdWdMZXFXY05ZVXRsbEY1c0tlWUdzNHlJL2FydjVUaHFUTGxNZHQKbStyRjZiek1jZ0dBNjNueW9EYkdaYXFOUWNPMTgrSmFTam89Ci0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo=
+  signerName: kubernetes.io/kube-apiserver-client
+  expirationSeconds: 31536000 # one year
+  usages:
+    - client auth
+=====================================================================================================================
+# kubectl apply -f csr.yml
+# kubectl get csr
+NAME     AGE   SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
+myuser   7s    kubernetes.io/kube-apiserver-client   kubernetes-admin   365d                Pending
+# kubectl certificate approve rupali
+# kubectl get csr
+NAME     AGE   SIGNERNAME                            REQUESTOR          REQUESTEDDURATION   CONDITION
+rupali   28s   kubernetes.io/kube-apiserver-client   kubernetes-admin   365d                Approved,Issued
+
+====== Create certificate file (.crt) [Declarative Way] ======
+# kubectl get csr rupali -o yaml > issuecert.yml
+# cat issuecert.yml => Copy 'certificate' from here and decode it.
+# echo "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM5akNDQWQ2Z0F3SUJBZ0lRTzR6Z0cwME1zcW9GM0JGWE9jd0ZFREFOQmdrcWhraUc5dzBCQVFzRkFEQVYKTVJNd0VRWURWUVFERXdwWERUSTJNRGd5TXpBeQpNVEV4TjFvd0VURVBNQTBHQTFVRUF4TUdjblZ3WVd4cE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBCk1JSUJDZ0tDQVFFQW1aV2xuK2x6aytCbjlYU1d5RU96b01IYlozSmVLRHZnUEhRaVdMazFyY0VvSzBxdGJHaXp1Y1J3ZVJQSE94T3VUelJta1RCR0ZGTUhBbmFpegpiWmQzRjJkck00c3VodURzWm1OZmUrMXhqYTU0RmxiRXZ1enZ4TThVdWlSRXdXN1ZQUnQ5OUdPQ0ZCem5xOWhNCnFjT3YwbUdCdlF3RkZXd3JSaFlwQzdvUHhhNkZHU2hGMXFQeXNSeUVTMXM1YVBFVDhjeVRXeG1qVjlyVnNHeWRwWDFHbG1OZ1NST3ZRcVFlTEllSU02K0UzbnY5dApQby9lV2E0SGRLNU50UnkyaitGWmdOWE5jWGNpd2ptVlJRSURBUUFCbzBZd1JEQVRCZ05WSFNVRUREQUtCZ2dyCkJnRUZCUWNEQWpBTUJnTlZIS3hqUGhTNUtDVmoKV2ZlWHJzcjdNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUFFQllHOHZrTGk1dWxQdTVXbnRXL1JsN0svTERXeApXcXV3SUxRQ1ZyY051YkMvQlBNSk5BUUhvLzBQZEFZc01rZXVRc1ZCWFNaTlhYcXZuS1BxUWdSelBQR29SaHVJN3BzbFFUTTZsdWlVdHVrNVFncGhWODRUeG9saGcKZmEydlk5UmYwRmljbytpcjRNQnJGN0RtMFozamxXRW1rOTJmVTBsR2RtdlIzV3EzOWx6d08xQzBwMi90WmUrWQphT2xsMmt3cWNQdzIzV1RMT2xCYi9WTjljYWU3dFdxYTBhUFFVaGtURlcvSE5vU1hZSG1oZFJ5TEowcXpxeWNhYm9mNU41MlVSZk1Nb09oY0Y2SE5lCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K" | base64 -d => We will get the decoded cerificate.
+# vim rupali.crt => Paste the decoded certificate obained in previous command.
+==========================================================================
+-----BEGIN CERTIFICATE-----
+MIIC9jCCAd6gAwIBAgIQO4zgG00MsqoF3BFXOcwFEDANBgkqhkiG9w0BAQsFADAV
+MRMwEQYDVQQDEwprdWJlcm5ldGVzMB4XDTI1MDgyMzAyMTExN1oXDTI2MDgyMzAy
+MTExN1owETEPMA0GA1UEAxMGcnVwYWxpMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A
+MIIBCgKCAQEAmZWln+lzk+Bn9XSWyEOzoMHbZ3JeKDvgPHQiWLk1rcEoK0qnnr1u
+2axniLuj3lwn4QPTV9eAO0iltac9T6tbGizucRweRPHOxOuTzRmkTBGFFMHAnaiz
+bZd3F2drM4suhuDsZmNfe+1xja54FlbEvuzvxM8UuiREwW7VPRt99GOCFBznq9hM
+qcOv0mGBvQwFFWwrRhYpC7oPxa6FGShF1qPysRM/jZ7R9H40kqtvfIRoo5y9CxRC
+nDU5Fnt5/yES1s5aPET8cyTWxmjV9rVsGydpX1GlmNgSROvQqQeLIeIM6+E3nv9t
+Po/eWa4HdK5NtRy2j+FZgNXNcXciwjmVRQIDAQABo0YwRDATBgNVHSUEDDAKBggr
+BgEFBQcDAjAMBgNVHRMBAf8EAjAAMB8GA1UdIwQYMBaAFEiMfpO5mKxjPhS5KCVj
+WfeXrsr7MA0GCSqGSIb3DQEBCwUAA4IBAQAEBYG8vkLi5ulPu5WntW/Rl7K/LDWx
+WquwILQCVrcNubC/BPMJNAQHo/0PdAYsMkeuQsVBXSZNXXqvnKPqQgRzPPGoRWKQ
+rri3yHlaERKhUjkaP52IGzLMM8L9Dkt3huI7pslQTM6luiUtuk5QgphV84Txolhg
+fa2vY9Rf0Fico+ir4MBrF7Dm0Z3jlWEmk92fU0lGdmvR3Wq39lzwO1C0p2/tZe+Y
+aOll2kwqcPw23WTLOlBb/VN9cae7tWqa0aPQUhkTdCOHGFrnC0pG/VeqWOkvOm6E
+XjMapFEQRoDFW/HNoSXYHmhdRyLJ0qzqycabof5N52URfMMoOhcF6HNe
+-----END CERTIFICATE-----
+==========================================================================
+
+====== Alternate way to create certificate file (.crt) [Imperative Way] ======
+# kubectl get csr rupali -o jsonpath='{.status.certificate}'| base64 -d > rupali.crt
+# cat rupali.crt => Now we have certificate file in one command. It has exactly the same content which we got in last command.
+# kubectl auth whoami
+ATTRIBUTE                                           VALUE
+Username                                            kubernetes-admin
+Groups                                              [kubeadm:cluster-admins system:authenticated]
+Extra: authentication.kubernetes.io/credential-id   [X509SHA256=ccd7ba55b3d0c42b9c04e575a235e1149372c434eda2f00712a908bd30998192]
+
+# kubectl auth can-i get pods => O/P: yes
+# kubectl auth can-i get pods --as rupali => O/P: no
+# vim role.yml
+==================================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: pod-reader
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["pods"]
+  verbs: ["get", "watch", "list"]
+==================================================================================
+# kubectl apply -f role.yml
+# kubectl get role
+NAME         CREATED AT
+pod-reader   2025-08-22T15:28:23Z
+
+# kubectl describe role/pod-reader
+Name:         pod-reader
+Labels:       <none>
+Annotations:  <none>
+PolicyRule:
+  Resources  Non-Resource URLs  Resource Names  Verbs
+  ---------  -----------------  --------------  -----
+  pods       []                 []              [get watch list]
+
+# vim binding.yml
+==================================================================================
+kind: RoleBinding
+metadata:
+  name: read-pods
+  namespace: default
+subjects:
+# You can specify more than one "subject"
+- kind: User
+  name: rupali # "name" is case sensitive
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # "roleRef" specifies the binding to a Role / ClusterRole
+  kind: Role #this must be Role or ClusterRole
+  name: pod-reader # this must match the name of the Role or ClusterRole you wish to bind to
+  apiGroup: rbac.authorization.k8s.io
+==================================================================================
+# kubectl apply -f binding.yml
+# kubectl get rolebinding
+NAME        ROLE              AGE
+read-pods   Role/pod-reader   11s
+
+# kubectl describe rolebinding/read-pods
+Name:         read-pods
+Labels:       <none>
+Annotations:  <none>
+Role:
+  Kind:  Role
+  Name:  pod-reader
+Subjects:
+  Kind  Name    Namespace
+  ----  ----    ---------
+  User  rupali
+
+# kubectl auth can-i get pods --as rupali => O/P: yes
+# kubectl config set-credentials rupali --client-key=rupali.key --client-certificate=rupali.crt
+# kubectl config get-clusters => O/P: kind-espn-cluster
+# kubectl config set-context rupali --cluster=kind-espn-cluster --user=rupali
+# kubectl config get-contexts
+CURRENT   NAME                CLUSTER             AUTHINFO            NAMESPACE
+*         kind-espn-cluster   kind-espn-cluster   kind-espn-cluster
+          myuser              kind-espn-cluster   myuser
+          rupali              kind-espn-cluster   rupali
+
+# kubectl config delete-context myuser
+# kubectl config get-contexts
+CURRENT   NAME                CLUSTER             AUTHINFO            NAMESPACE
+*         kind-espn-cluster   kind-espn-cluster   kind-espn-cluster
+          rupali              kind-espn-cluster   rupali
+		  
+# kubectl config use-context rupali
+Switched to context "rupali".
+
+# kubectl config get-contexts
+CURRENT   NAME                CLUSTER             AUTHINFO            NAMESPACE
+          kind-espn-cluster   kind-espn-cluster   kind-espn-cluster
+*         rupali              kind-espn-cluster   rupali
+
+# kubectl auth whoami
+ATTRIBUTE                                           VALUE
+Username                                            rupali
+Groups                                              [system:authenticated]
+Extra: authentication.kubernetes.io/credential-id   [X509SHA256=60f25a4c690ba370f5a4ffdb490ea3c4ee0bf01a7e519c6b02fe8a162e8a51c1]
+
+# kubectl get pods => We can see the pods now.
+# kubectl get deployments => Error from server (Forbidden): deployments.apps is forbidden: User "rupali" cannot list resource "deployments" in API group "apps" in the namespace "default"
+# kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: DATA+OMITTED
+    server: https://127.0.0.1:38631
+  name: kind-espn-cluster
+contexts:
+- context:
+    cluster: kind-espn-cluster
+    user: kind-espn-cluster
+  name: kind-espn-cluster
+- context:
+    cluster: kind-espn-cluster
+    user: rupali
+  name: rupali
+current-context: rupali
+kind: Config
+preferences: {}
+users:
+- name: kind-espn-cluster
+  user:
+    client-certificate-data: DATA+OMITTED
+    client-key-data: DATA+OMITTED
+- name: myuser
+  user:
+    client-certificate: /home/abhay/piyush_k8s/day-21/myuser.crt
+    client-key: /home/abhay/piyush_k8s/day-21/myuser.key
+- name: rupali
+  user:
+    client-certificate: /home/abhay/piyush_k8s/day-23/rupali.crt
+    client-key: /home/abhay/piyush_k8s/day-23/rupali.key
+
+# docker exec -it espn-cluster-control-plane bash
+root@espn-cluster-control-plane:/# cd /etc/kubernetes/pki/
+root@espn-cluster-control-plane:/etc/kubernetes/pki# cat ca.crt => Copy the content. Use CTRL+D to exit.
+# vim ca.crt
+====================================================
+-----BEGIN CERTIFICATE-----
+MIIDBTCCAe2gAwIBAgIIHSiRp51EYoUwDQYJKoZIhvcNAQELBQAwFTETMBEGA1UE
+AxMKa3ViZXJuZXRlczAeFw0yNTA3MTkwODA1MTlaFw0zNTA3MTcwODEwMTlaMBUx
+EzARBgNVBAMTCmt1YmVybmV0ZXMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQDk3MrsanU+kF4D/tmIth8nb7n3vnD2+tRuexK3722+o2nQeQkbZTWahuW3
+c75OrWzv0QyyzNegQBR03CcrsSElIy27DNha/xXqgYvIXVjTtBaG7dO5sIbhdm0G
+l9gs7aDuTegwZ1HkRSEAShifuAYtzfMMzW6oWoEzuMUv9yaMLvEiqXEHPc/OhUAR
+LngSeZ7DkeeYj9tXpWMY3+/iN+YNRPXxallyBoEWyQC3JwhGgO7iShXBiEc62tUM
+i/wXxzmNzZW6R/n3G3wnT0dy/oPRLFGTkHuBJEqUZlJn7QgvAnRVyGF895GRpC0m
+gufBjP6rl2ZgEAG/zQ7pXe0ckkANAgMBAAGjWTBXMA4GA1UdDwEB/wQEAwICpDAP
+BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBRIjH6TuZisYz4UuSglY1n3l67K+zAV
+BgNVHREEDjAMggprdWJlcm5ldGVzMA0GCSqGSIb3DQEBCwUAA4IBAQBWJV2Tzf3a
+vUGbQxu7PKpzVAkazk2xMfLVzr75Vt/ig2OHc99WcxcBnsCI9UBkwRpRNa+FyG6M
+5tA1A4Fd7K/w5kZDaYioQipnKXuejhIswhZ84ij2/Yazej/z22ah0r0cdK0AVWdO
+5Stf+gbSW3rsBrM8hjPcn00NutbB7o6IcL6UPPvpyOGR106vQiFGjjxMLETtpgmX
+ByPy26cfe5p6HaaPkEZVXOHNWOlJJm44N02oW83d8JcaHMe9rE8mgRZGyK9Wi/md
+u2JWraNtGaBLFn5hJDSd9jqDvwtf4NkNQ7e6cI42iV7mEKtppEGZziImk1lH2VVZ
+XsRNwg9thcsx
+-----END CERTIFICATE-----
+====================================================
+# curl -k https://localhost:38631/api/v1/namespaces/default/pods --key rupali.key --cacert ca.crt --cert rupali.crt => API call to get pods.
+
+# kubectl config use-context kind-espn-cluster
+Switched to context "kind-espn-cluster".
+
+# abhay@ubuntu-laptop:~/.../day-23$ kubectl config get-contexts
+CURRENT   NAME                CLUSTER             AUTHINFO            NAMESPACE
+*         kind-espn-cluster   kind-espn-cluster   kind-espn-cluster
+          rupali              kind-espn-cluster   rupali
+
+# ls => binding.yml  ca.crt  csr.yml  issuecert.yml  role.yml  rupali.crt  rupali.csr  rupali.key
+
