@@ -1,0 +1,60 @@
+# kubectl api-resources --namespaced=true => Check namespace wide kubernetes resources.
+# kubectl api-resources --namespaced=false => Check cluster wide kubernetes resources.
+# kubectl auth can-i get nodes --as rupali
+Warning: resource 'nodes' is not namespace scoped
+no
+
+# kubectl create clusterrole node-reader --verb=get,list,watch --resource=node => Create cluster wide role (Imperative way).
+# kubectl get clusterrole => List all cluster roles.
+# kubectl get clusterrole | grep node-reader
+# kubectl describe clusterrole/node-reader
+Name:         node-reader
+Labels:       <none>
+Annotations:  <none>
+PolicyRule:
+  Resources  Non-Resource URLs  Resource Names  Verbs
+  ---------  -----------------  --------------  -----
+  nodes      []                 []              [get list watch]
+ 
+# kubectl create clusterrolebinding node-reader-binding --clusterrole node-reader --user=rupali => Create cluster wide rolebinding (Imperative way).
+# kubectl get clusterrolebindings => List all cluster rolebindings.
+# kubectl describe clusterrolebindings/node-reader-binding
+Name:         node-reader-binding
+Labels:       <none>
+Annotations:  <none>
+Role:
+  Kind:  ClusterRole
+  Name:  node-reader
+  
+# kubectl auth can-i get nodes --as rupali
+Warning: resource 'nodes' is not namespace scoped
+yes
+
+# kubectl config get-contexts
+CURRENT   NAME                CLUSTER             AUTHINFO            NAMESPACE
+*         kind-espn-cluster   kind-espn-cluster   kind-espn-cluster
+          rupali              kind-espn-cluster   rupali
+
+# kubectl config use-context rupali
+# kubectl config get-contexts
+CURRENT   NAME                CLUSTER             AUTHINFO            NAMESPACE
+          kind-espn-cluster   kind-espn-cluster   kind-espn-cluster
+*         rupali              kind-espn-cluster   rupali
+
+# kubectl get nodes
+NAME                         STATUS   ROLES           AGE   VERSION
+espn-cluster-control-plane   Ready    control-plane   36d   v1.32.0
+espn-cluster-worker          Ready    <none>          36d   v1.32.0
+espn-cluster-worker2         Ready    <none>          36d   v1.32.0
+
+# kubectl describe node espn-cluster-worker => It will list the complete details. (As this clusterrole has list permission)
+# kubectl delete node espn-cluster-worker
+Error from server (Forbidden): nodes "espn-cluster-worker" is forbidden: User "rupali" cannot delete resource "nodes" in API group "" at the cluster scope
+
+# kubectl config use-context kind-espn-cluster
+# kubectl config get-contexts
+CURRENT   NAME                CLUSTER             AUTHINFO            NAMESPACE
+*         kind-espn-cluster   kind-espn-cluster   kind-espn-cluster
+          rupali              kind-espn-cluster   rupali
+
+		  
