@@ -1,0 +1,215 @@
+# kubectl get pods -n kube-system ==> We have "kindnet" pod for the networking by default which doesn't support network policies.
+# kubectl get ds -A => This "kindnet" is deployed as daemon set. This means we have one pod of "kindnet" on each node in the cluster.
+# vim cluster.yml => Make sure to remove previously created cluster, as it will give error dueing starting control plane node. 
+====================================================
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+networking:
+  disableDefaultCNI: true
+  podSubnet: 192.168.0.0/16
+====================================================
+# kind create cluster --name=espn-cluster --config=cluster.yml
+# kind get clusters
+# kubectl get nodes
+NAME                         STATUS     ROLES           AGE   VERSION
+espn-cluster-control-plane   NotReady   control-plane   37s   v1.32.0
+espn-cluster-worker          NotReady   <none>          20s   v1.32.0
+espn-cluster-worker2         NotReady   <none>          19s   v1.32.0
+
+==> Status will remain "NotReady" until we install any CNI. Here we are using "Calico" cause it supports network policies.
+# kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.30.3/manifests/calico.yaml
+# kubectl get ds -A
+NAMESPACE     NAME          DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE
+kube-system   calico-node   3         3         3       3            3           kubernetes.io/os=linux   11m
+kube-system   kube-proxy    3         3         3       3            3           kubernetes.io/os=linux   13m
+
+# kubectl get pods -n kube-system
+NAME                                                 READY   STATUS    RESTARTS   AGE
+calico-kube-controllers-7959b6fcd8-x5lqb             1/1     Running   0          7m6s
+calico-node-9h8fn                                    1/1     Running   0          7m6s
+calico-node-gvrzv                                    1/1     Running   0          7m6s
+calico-node-x6pdw                                    1/1     Running   0          7m6s
+coredns-668d6bf9bc-2nkrh                             1/1     Running   0          9m13s
+coredns-668d6bf9bc-6qj9q                             1/1     Running   0          9m13s
+etcd-espn-cluster-control-plane                      1/1     Running   0          9m17s
+kube-apiserver-espn-cluster-control-plane            1/1     Running   0          9m18s
+kube-controller-manager-espn-cluster-control-plane   1/1     Running   0          9m21s
+kube-proxy-2mz68                                     1/1     Running   0          9m5s
+kube-proxy-9gqf7                                     1/1     Running   0          9m4s
+kube-proxy-wrlqd                                     1/1     Running   0          9m13s
+kube-scheduler-espn-cluster-control-plane            1/1     Running   0          9m17s
+
+# vim manifest.yml
+===========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend
+  labels:
+    role: frontend
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  labels:
+    role: frontend
+spec:
+  selector:
+    role: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backend
+  labels:
+    role: backend
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - name: http
+      containerPort: 80
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    role: backend
+spec:
+  selector:
+    role: backend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mysql
+  labels:
+    name: mysql
+spec:
+  containers:
+    - name: mysql
+      image: mysql:latest
+      env:
+        - name: "MYSQL_USER"
+          value: "mysql"
+        - name: "MYSQL_PASSWORD"
+          value: "mysql"
+        - name: "MYSQL_DATABASE"
+          value: "testdb"
+        - name: "MYSQL_ROOT_PASSWORD"
+          value: "verysecure"
+      ports:
+        - name: http
+          containerPort: 3306
+          protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  labels:
+    name: mysql
+spec:
+  selector:
+    name: mysql
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
+===========================================================
+# kubectl apply -f manifest.yml
+# kubectl get pods
+NAME       READY   STATUS    RESTARTS   AGE
+backend    1/1     Running   0          8m33s
+frontend   1/1     Running   0          8m33s
+mysql      1/1     Running   0          8m33s
+
+# kubectl get svc
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+backend      ClusterIP   10.96.187.13   <none>        80/TCP     8m54s
+db           ClusterIP   10.96.247.58   <none>        3306/TCP   8m54s
+frontend     ClusterIP   10.96.90.147   <none>        80/TCP     8m54s
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP    25m
+
+# kubectl exec -it frontend -- bash
+root@frontend:/# curl backend:80 => The webpage is accessible now.
+root@frontend:/# apt-get update && apt-get install telnet -y
+root@frontend:/# telnet db 3306 => Able to connect to db.
+==> use CTRL+D to exit from pod.
+==> Now we want to implement network policy which will allow only "backend" to connect to "db", not the "frontend" to "db".
+# vim netpolicy.yml
+=========================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: db-test
+spec:
+  podSelector:
+    matchLabels:
+      name: mysql
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          role: backend
+    ports:
+    - port: 3306
+      protocol: TCP
+=========================================================
+# kubectl apply -f netpolicy.yml
+# kubectl get netpol
+NAME      POD-SELECTOR   AGE
+db-test   name=mysql     10s
+
+# kubectl describe netpol/db-test
+Name:         db-test
+Namespace:    default
+Created on:   2025-08-31 20:00:44 +0530 IST
+Labels:       <none>
+Annotations:  <none>
+Spec:
+  PodSelector:     name=mysql
+  Allowing ingress traffic:
+    To Port: 3306/TCP
+    From:
+      PodSelector: role=backend
+  Not affecting egress traffic
+  Policy Types: Ingress
+  
+# kubectl exec -it frontend -- bash
+root@frontend:/# telnet db 3306
+Trying 10.96.247.58...
+
+==> This way we have restricted "frontend" to connect "db".
+==> use CTRL+D to exit from pod.
+# kubectl exec -it backend -- bash
+root@backend:/# apt-get update && apt-get install telnet -y
+root@backend:/# telnet db 3306 => Able to connect to db.
+==> use CTRL+D to exit from pod.
+==> This way only "backend" can connect to "db".
