@@ -1,0 +1,61 @@
+# git clone https://github.com/docker/getting-started-app.git
+# cd getting-started-app/
+# vim Dockerfile
+==========================================================
+FROM node:18-alpine
+WORKDIR /app
+COPY . .
+RUN yarn install --production
+CMD ["node", "src/index.js"]
+EXPOSE 3000
+==========================================================
+# docker image build -t day02-todo:latest .
+# docker image ls
+# docker container run -dp 3000:3000 --name todo day02-todo
+# docker container ls
+# docker container exec -it todo sh
+/app # mkdir test-demo
+/app # ls -ltr
+==> Use CTRL+D to exit.
+# docker container rm -f todo => Once we remove this container, the data will get lost as we are not using volume hare.
+# docker container ls
+========= Docker Volume ============
+# docker volume create data_vol
+# docker volume ls
+# docker volume inspect data_vol
+# sudo ls /var/lib/docker/volumes/data_vol/_data/ => This directory will content container's work directory content here.
+# docker container run -dp 3000:3000 --name todo -v data_vol:/app day02-todo
+# sudo ls /var/lib/docker/volumes/data_vol/_data/
+# docker container exec -it todo sh
+/app # mkdir test-demo
+/app # ls -ltr
+==> Use CTRL+D to exit.
+# sudo ls /var/lib/docker/volumes/data_vol/_data/ => We can see "test-demo" direcroey here.
+# docker container stop todo
+# docker container start todo
+# docker container exec -it todo sh
+/app # ls -ltr => Files are intact here.
+==> Use CTRL+D to exit.
+# docker container rm -f todo
+# docker container ls
+# docker container run -dp 3000:3000 --name todo -v data_vol:/app day02-todo
+# docker container ls
+# docker container exec -it todo sh
+/app # ls -ltr => Files are intact here.
+==> Use CTRL+D to exit.
+# docker container rm -f todo
+# docker container ls
+=========== Docker Volume Using Bind ===========
+# mkdir /home/abhay/piyush-k8s/day-28/todo_vol
+# docker volume create todo_vol --opt o=bind --opt device=/home/abhay/piyush_k8s/day-28/todo_vol --opt type=none
+# docker volume ls
+# docker volume inspect todo_vol
+# docker container run -dp 3000:3000 --name todo --mount source=todo_vol,target=/app day02-todo
+# docker container ls
+# docker container exec -it todo sh
+/app # mkdir test-demo
+/app # ls -ltr
+==> Use CTRL+D to exit.
+# cd /home/abhay/piyush_k8s/day-28/todo_vol
+# ls -ltr => Container's work directory content. We can see "test-demo" directory here.
+# docker container rm -f todo
