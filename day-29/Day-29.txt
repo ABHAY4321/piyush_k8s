@@ -1,0 +1,128 @@
+vim redis.yml
+===========================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-pod
+spec:
+  containers:
+    - name: redis
+      image: redis
+      volumeMounts:
+        - name: redis-storage
+          mountPath: /data/redis
+  volumes:
+    - name: redis-storage
+      emptyDir: {}
+===========================================================
+# kubectl apply -f redis.yml
+# kubectl get pods
+redis-pod   1/1     Running
+
+# kubectl exec -it redis-pod -- bash
+root@redis-pod:/data# cd redis/
+root@redis-pod:/data/redis# ls => It has nothing here.
+root@redis-pod:/data/redis# echo "Welcome to Cricbuzz World!" > test.txt
+root@redis-pod:/data/redis# ls => test.txt
+root@redis-pod:/data/redis# apt-get update && apt-get install procps
+root@redis-pod:/data/redis# ps -aux
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+redis          1  0.9  0.2 154296 20736 ?        Ssl  06:45   0:02 redis-server *:6379
+root          42  0.0  0.0   4196  3200 pts/1    Ss   06:47   0:00 bash
+root         237 50.0  0.0   8068  4096 pts/1    R+   06:49   0:00 ps -aux
+
+root@redis-pod:/data/redis# kill -9 1
+root@redis-pod:/data/redis# ps -aux
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+redis          1  0.9  0.2 154296 20736 ?        Ssl  06:45   0:02 redis-server *:6379
+root          42  0.0  0.0   4196  3200 pts/1    Ss   06:47   0:00 bash
+root         238  100  0.0   8068  4224 pts/1    R+   06:50   0:00 ps -aux
+
+root@redis-pod:/data/redis# ls => test.txt => This file is still present here. Reason: We have killed the container, bur "emptyDir" is bound to pod, not to container.
+==> Use CTRL+D to exit from pod.
+#  kubectl delete pod redis-pod
+# # kubectl apply -f redis.yml
+# kubectl get pods
+redis-pod   1/1     Running
+
+# kubectl exec -it redis-pod -- bash
+root@redis-pod:/data# cd redis/
+root@redis-pod:/data/redis# ls => It has nothing here. So we deleted the pod & it has deleted volume as well.
+
+# vim pv.yml
+===================================================================
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: task-pv-volume
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/home/abhay/piyush_k8s/day-29/volume"
+===================================================================
+# kubectl apply -f pv.yml
+# vim pvc.yml
+======================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+======================================================================
+# kubectl apply -f pvc.yml
+# kubectl get pv
+NAME             CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                   STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+task-pv-volume   1Gi        RWO            Retain           Bound    default/task-pv-claim                  <unset>                          42s
+
+# kubectl get pvc
+NAME            STATUS   VOLUME           CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+task-pv-claim   Bound    task-pv-volume   1Gi        RWO                           <unset>                 12s
+
+# vim pod.yml
+====================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task-pv-pod
+spec:
+  containers:
+    - name: task-pv-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: "http-server"
+      volumeMounts:
+        - name: task-pv-storage
+          mountPath: "/usr/share/nginx/html"
+
+  volumes:
+    - name: task-pv-storage
+      persistentVolumeClaim:
+        claimName: task-pv-claim
+======================================================================
+# kubectl apply -f pod.yml
+# kubectl get pods -o wide
+NAME          READY   STATUS    RESTARTS   AGE     IP               NODE                           NOMINATED NODE   READINESS GATES
+task-pv-pod   1/1     Running   0          3m29s   172.16.219.1     k8s-rocky-node2.cricbuzz.net   <none>           <none>
+
+# kubectl exec -it task-pv-pod -- bash
+root@task-pv-pod:/# cd /usr/share/nginx/html/
+root@task-pv-pod:/usr/share/nginx/html# ls => It is empty currently.
+root@task-pv-pod:/usr/share/nginx/html# echo "Welcome to cricbuzz World!" > index.html
+==> Use CTRL+D to quit.
+==> Go to the node on which this pod is running. 
+# ls /home/abhay/piyush_k8s/day-29/volume => index.html
+==> From master
+# kubectl exec -it task-pv-pod -- curl localhost
+Welcome to cricbuzz World!
+
