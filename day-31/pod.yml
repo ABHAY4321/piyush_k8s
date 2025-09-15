@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  nodeName: k8s-node1.cricbuzz.net
+  containers:
+    - name: nginx-ctrx
+      image: nginx:latest
+      ports:
+        - containerPort: 80

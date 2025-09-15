@@ -1,0 +1,217 @@
+# vim pod.yml
+==================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  nodeName: k8s-node1.cricbuzz.net
+  containers:
+    - name: nginx-ctrx
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+==================================================================
+# vim pod1.yml
+==================================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx1
+  labels:
+    app: nginx1
+spec:
+  nodeName: k8s-node2.cricbuzz.net
+  containers:
+    - name: nginx-ctrx
+      image: nginx:latest
+      ports:
+        - containerPort: 80
+==================================================================
+# vim service.yml
+==================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+    app: nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: ClusterIP
+==================================================================
+# vim service1.yml
+==================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx1
+spec:
+  selector:
+    app: nginx1
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: ClusterIP
+==================================================================
+# kubectl get pods -o wide
+NAME     READY   STATUS    RESTARTS   AGE   IP               NODE                     NOMINATED NODE   READINESS GATES
+nginx    1/1     Running   0          31s   172.16.132.106   k8s-node1.cricbuzz.net   <none>           <none>
+nginx1   1/1     Running   0          31s   172.16.249.21    k8s-node2.cricbuzz.net   <none>           <none>
+
+# kubectl get svc -o wide
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE    SELECTOR
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP   296d   <none>
+nginx        ClusterIP   10.101.193.22   <none>        80/TCP    40s    app=nginx
+nginx1       ClusterIP   10.98.82.108    <none>        80/TCP    39s    app=nginx1
+
+# kubectl scale deploy coredns --replicas=0 -n kube-system => For Testing purpose.
+# kubectl get deploy -n kube-system
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+calico-kube-controllers   1/1     1            1           296d
+coredns                   0/0     0            0           296d
+
+# kubectl exec -it nginx -- curl nginx1
+curl: (6) Could not resolve host: nginx1
+command terminated with exit code 6
+
+# kubectl exec -it nginx -- curl 10.98.82.108
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+# kubectl scale deploy coredns --replicas=2 -n kube-system
+# kubectl get deploy -n kube-system
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+calico-kube-controllers   1/1     1            1           296d
+coredns                   2/2     2            2           296d
+
+# kubectl exec -it nginx -- curl nginx1
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+# kubectl get svc -n kube-system
+NAME                                                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)                        AGE
+kube-dns                                             ClusterIP   10.96.0.10   <none>        53/UDP,53/TCP,9153/TCP         296d
+
+# kubectl exec -it nginx -- bash
+root@nginx:/# cat /etc/resolv.conf
+search default.svc.cluster.local svc.cluster.local cluster.local
+nameserver 10.96.0.10
+options ndots:5
+
+root@nginx:/# cat /etc/hosts
+# Kubernetes-managed hosts file.
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+fe00::0 ip6-mcastprefix
+fe00::1 ip6-allnodes
+fe00::2 ip6-allrouters
+172.16.132.106  nginx
+
+root@nginx:/# hostname -i
+172.16.132.106
+
+==> Use CTRL+D to exit.
+
+# kubectl get pods -n kube-system
+coredns-76f75df574-lpwtl                          1/1     Running   0          9m48s
+coredns-76f75df574-mbt2b                          1/1     Running   0          9m48s
+
+# kubectl describe pod coredns-76f75df574-lpwtl -n kube-system
+	Mounts:
+      /etc/coredns from config-volume (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-kdszt (ro)
+Volumes:
+  config-volume:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      coredns
+	
+# kubectl get cm -n kube-system
+coredns                                                1      296d
+
+# kubectl describe cm coredns -n kube-system
+Name:         coredns
+Namespace:    kube-system
+Labels:       <none>
+Annotations:  <none>
+
+Data
+====
+Corefile:
+----
+.:53 {
+    errors
+    health {
+       lameduck 5s
+    }
+    ready
+    kubernetes cluster.local in-addr.arpa ip6.arpa {
+       pods insecure
+       fallthrough in-addr.arpa ip6.arpa
+       ttl 30
+    }
+    prometheus :9153
+    forward . /etc/resolv.conf {
+       max_concurrent 1000
+    }
+    cache 30
+    loop
+    reload
+    loadbalance
+}
+
+
+BinaryData
+====
+
+Events:  <none>
+
