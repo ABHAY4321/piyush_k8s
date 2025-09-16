@@ -5,7 +5,7 @@ metadata:
   labels:
     app: nginx
 spec:
-  nodeName: k8s-node1.cricbuzz.net
+  nodeName: k8s-rocky-node1.cricbuzz.net
   containers:
     - name: nginx-ctrx
       image: nginx:latest
