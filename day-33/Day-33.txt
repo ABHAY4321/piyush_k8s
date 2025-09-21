@@ -1,0 +1,95 @@
+# docker image build -t pinku9627/cka-ingress-demo:v1 .
+# docker login -u pinku9627
+# docker image push pinku9627/cka-ingress-demo:v1
+# vim deployment.yaml
+============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+  labels:
+    app: hello-world
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-world
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      containers:
+      - name: hello-world
+        image: pinku9627/cka-ingress-demo:v1
+        ports:
+        - containerPort: 80
+============================================================================
+# kubectl apply -f deployment.yaml
+# vim service.yaml
+===============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world
+spec:
+  selector:
+    app: hello-world
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+===============================================
+#  kubectl get pods
+NAME                           READY   STATUS    RESTARTS   AGE
+hello-world-76dc6f559c-hvk2x   1/1     Running   0          51s
+
+# kubectl get svc
+NAME          TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+hello-world   ClusterIP   10.100.13.152   <none>        80/TCP    6s
+kubernetes    ClusterIP   10.96.0.1       <none>        443/TCP   62d
+
+# curl 10.100.13.152 => Hello, World!
+# vim ingress.yaml
+=====================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-world
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: "test.cricbuzz.net"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: hello-world
+            port:
+              number: 80
+=======================================================================
+kubectl get ingress
+NAME          CLASS   HOSTS               ADDRESS           PORTS   AGE
+hello-world   nginx   test.cricbuzz.net      				80      51m
+
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.13.2/deploy/static/provider/baremetal/deploy.yaml => Baremetal Nginx Ingress Controller.
+# kubectl get pods -n ingress-nginx
+NAME                                        READY   STATUS    RESTARTS   AGE
+ingress-nginx-controller-59cb99b44c-95hxv   1/1     Running   0          2m29s
+
+# kubectl edit pod -n ingress-nginx ingress-nginx-controller-59cb99b44c-95hxv
+# kubectl get ingress
+NAME          CLASS   HOSTS               ADDRESS           PORTS   AGE
+hello-world   nginx   test.cricbuzz.net   192.168.154.152   80      51m
+
+# kubectl get svc -n ingress-nginx
+NAME                                 TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+ingress-nginx-controller             NodePort    10.104.240.116   <none>        80:32101/TCP,443:31828/TCP   5m50s
+ingress-nginx-controller-admission   ClusterIP   10.108.143.229   <none>        443/TCP                      5m50s
+
+# curl test.cricbuzz.net --resolve test.cricbuzz.net:80:10.104.240.116 => Hello, World!
+==> We must need to use NodePort IP here.
