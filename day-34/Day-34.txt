@@ -1,0 +1,340 @@
+================== Kubernetes Cluster Upgrade ========================
+# kubectl get nodes
+NAME                      STATUS     ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready      control-plane   306d   v1.29.0
+k8s-node1.cricbuzz.net    Ready      <none>          306d   v1.29.0
+k8s-node2.cricbuzz.net    NotReady   <none>          306d   v1.29.0
+
+==> We are going to upgrade it to version 1:30:14.
+
+========= Master Upgrade ==============
+# pager /etc/apt/sources.list.d/kubernetes.list => Currently it has repository for version 1.29.
+# sudo vim /etc/apt/sources.list.d/kubernetes.list
+============================================================================================================
+deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /
+============================================================================================================
+==> Find the latest patch release for Kubernetes 1.30 using the OS package manager:
+# sudo apt update
+# sudo apt-cache madison kubeadm
+kubeadm | 1.30.14-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.13-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.12-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.11-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.10-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.9-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.8-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.7-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.6-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.5-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.4-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.3-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.2-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.1-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+   kubeadm | 1.30.0-1.1 | https://pkgs.k8s.io/core:/stable:/v1.30/deb  Packages
+
+==> Upgrade kubeadm:
+# sudo apt-mark unhold kubeadm && \
+sudo apt-get update && sudo apt-get install -y kubeadm='1.30.14-1.1' && \
+sudo apt-mark hold kubeadm
+
+==> Verify that the download works and has the expected version:
+# kubeadm version
+kubeadm version: &version.Info{Major:"1", Minor:"30", GitVersion:"v1.30.14", GitCommit:"9e18483918821121abdf9aa82bc14d66df5d68cd", GitTreeState:"clean", BuildDate:"2025-06-17T18:34:53Z", GoVersion:"go1.23.10", Compiler:"gc", Platform:"linux/amd64"}
+
+==> Verify the upgrade plan:
+# sudo kubeadm upgrade plan
+[preflight] Running pre-flight checks.
+[upgrade/config] Reading configuration from the cluster...
+[upgrade/config] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[upgrade] Running cluster health checks
+[upgrade] Fetching available versions to upgrade to
+[upgrade/versions] Cluster version: 1.29.11
+[upgrade/versions] kubeadm version: v1.30.14
+I0924 15:35:09.061277    8303 version.go:256] remote version is much newer: v1.34.1; falling back to: stable-1.30
+[upgrade/versions] Target version: v1.30.14
+[upgrade/versions] Latest version in the v1.29 series: v1.29.15
+
+Components that must be upgraded manually after you have upgraded the control plane with 'kubeadm upgrade apply':
+COMPONENT   NODE                      CURRENT   TARGET
+kubelet     k8s-master.cricbuzz.net   v1.29.0   v1.29.15
+kubelet     k8s-node1.cricbuzz.net    v1.29.0   v1.29.15
+kubelet     k8s-node2.cricbuzz.net    v1.29.0   v1.29.15
+
+Upgrade to the latest version in the v1.29 series:
+
+COMPONENT                 NODE                      CURRENT    TARGET
+kube-apiserver            k8s-master.cricbuzz.net   v1.29.11   v1.29.15
+kube-controller-manager   k8s-master.cricbuzz.net   v1.29.11   v1.29.15
+kube-scheduler            k8s-master.cricbuzz.net   v1.29.11   v1.29.15
+kube-proxy                                          1.29.11    v1.29.15
+CoreDNS                                             v1.11.1    v1.11.3
+etcd                      k8s-master.cricbuzz.net   3.5.10-0   3.5.15-0
+
+You can now apply the upgrade by executing the following command:
+
+        kubeadm upgrade apply v1.29.15
+
+_____________________________________________________________________
+
+Components that must be upgraded manually after you have upgraded the control plane with 'kubeadm upgrade apply':
+COMPONENT   NODE                      CURRENT   TARGET
+kubelet     k8s-master.cricbuzz.net   v1.29.0   v1.30.14
+kubelet     k8s-node1.cricbuzz.net    v1.29.0   v1.30.14
+kubelet     k8s-node2.cricbuzz.net    v1.29.0   v1.30.14
+
+Upgrade to the latest stable version:
+
+COMPONENT                 NODE                      CURRENT    TARGET
+kube-apiserver            k8s-master.cricbuzz.net   v1.29.11   v1.30.14
+kube-controller-manager   k8s-master.cricbuzz.net   v1.29.11   v1.30.14
+kube-scheduler            k8s-master.cricbuzz.net   v1.29.11   v1.30.14
+kube-proxy                                          1.29.11    v1.30.14
+CoreDNS                                             v1.11.1    v1.11.3
+etcd                      k8s-master.cricbuzz.net   3.5.10-0   3.5.15-0
+
+You can now apply the upgrade by executing the following command:
+
+        kubeadm upgrade apply v1.30.14
+
+_____________________________________________________________________
+
+
+The table below shows the current state of component configs as understood by this version of kubeadm.
+Configs that have a "yes" mark in the "MANUAL UPGRADE REQUIRED" column require manual config upgrade or
+resetting to kubeadm defaults before a successful upgrade can be performed. The version to manually
+upgrade to is denoted in the "PREFERRED VERSION" column.
+
+API GROUP                 CURRENT VERSION   PREFERRED VERSION   MANUAL UPGRADE REQUIRED
+kubeproxy.config.k8s.io   v1alpha1          v1alpha1            no
+kubelet.config.k8s.io     v1beta1           v1beta1             no
+_____________________________________________________________________
+
+==> Choose a version to upgrade to, and run the appropriate command:
+# sudo kubeadm upgrade apply v1.30.14
+[preflight] Running pre-flight checks.
+[upgrade/config] Reading configuration from the cluster...
+[upgrade/config] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[upgrade] Running cluster health checks
+[upgrade/version] You have chosen to change the cluster version to "v1.30.14"
+[upgrade/versions] Cluster version: v1.29.11
+[upgrade/versions] kubeadm version: v1.30.14
+[upgrade] Are you sure you want to proceed? [y/N]: y
+[upgrade/prepull] Pulling images required for setting up a Kubernetes cluster
+[upgrade/prepull] This might take a minute or two, depending on the speed of your internet connection
+[upgrade/prepull] You can also perform this action in beforehand using 'kubeadm config images pull'
+W0924 15:42:21.345261   10336 checks.go:844] detected that the sandbox image "registry.k8s.io/pause:3.10" of the container runtime is inconsistent with that used by kubeadm.It is recommended to use "registry.k8s.io/pause:3.9" as the CRI sandbox image.
+[upgrade/apply] Upgrading your Static Pod-hosted control plane to version "v1.30.14" (timeout: 5m0s)...
+[upgrade/etcd] Upgrading to TLS for etcd
+[upgrade/staticpods] Preparing for "etcd" upgrade
+[upgrade/staticpods] Renewing etcd-server certificate
+[upgrade/staticpods] Renewing etcd-peer certificate
+[upgrade/staticpods] Renewing etcd-healthcheck-client certificate
+[upgrade/staticpods] Moved new manifest to "/etc/kubernetes/manifests/etcd.yaml" and backed up old manifest to "/etc/kubernetes/tmp/kubeadm-backup-manifests-2025-09-24-15-44-30/etcd.yaml"
+[upgrade/staticpods] Waiting for the kubelet to restart the component
+[upgrade/staticpods] This can take up to 5m0s
+[apiclient] Found 1 Pods for label selector component=etcd
+[upgrade/staticpods] Component "etcd" upgraded successfully!
+[upgrade/etcd] Waiting for etcd to become available
+[upgrade/staticpods] Writing new Static Pod manifests to "/etc/kubernetes/tmp/kubeadm-upgraded-manifests2381088850"
+[upgrade/staticpods] Preparing for "kube-apiserver" upgrade
+[upgrade/staticpods] Renewing apiserver certificate
+[upgrade/staticpods] Renewing apiserver-kubelet-client certificate
+[upgrade/staticpods] Renewing front-proxy-client certificate
+[upgrade/staticpods] Renewing apiserver-etcd-client certificate
+[upgrade/staticpods] Moved new manifest to "/etc/kubernetes/manifests/kube-apiserver.yaml" and backed up old manifest to "/etc/kubernetes/tmp/kubeadm-backup-manifests-2025-09-24-15-44-30/kube-apiserver.yaml"
+[upgrade/staticpods] Waiting for the kubelet to restart the component
+[upgrade/staticpods] This can take up to 5m0s
+[apiclient] Found 1 Pods for label selector component=kube-apiserver
+[upgrade/staticpods] Component "kube-apiserver" upgraded successfully!
+[upgrade/staticpods] Preparing for "kube-controller-manager" upgrade
+[upgrade/staticpods] Renewing controller-manager.conf certificate
+[upgrade/staticpods] Moved new manifest to "/etc/kubernetes/manifests/kube-controller-manager.yaml" and backed up old manifest to "/etc/kubernetes/tmp/kubeadm-backup-manifests-2025-09-24-15-44-30/kube-controller-manager.yaml"
+[upgrade/staticpods] Waiting for the kubelet to restart the component
+[upgrade/staticpods] This can take up to 5m0s
+[apiclient] Found 1 Pods for label selector component=kube-controller-manager
+[upgrade/staticpods] Component "kube-controller-manager" upgraded successfully!
+[upgrade/staticpods] Preparing for "kube-scheduler" upgrade
+[upgrade/staticpods] Renewing scheduler.conf certificate
+[upgrade/staticpods] Moved new manifest to "/etc/kubernetes/manifests/kube-scheduler.yaml" and backed up old manifest to "/etc/kubernetes/tmp/kubeadm-backup-manifests-2025-09-24-15-44-30/kube-scheduler.yaml"
+[upgrade/staticpods] Waiting for the kubelet to restart the component
+[upgrade/staticpods] This can take up to 5m0s
+[apiclient] Found 1 Pods for label selector component=kube-scheduler
+[upgrade/staticpods] Component "kube-scheduler" upgraded successfully!
+[upload-config] Storing the configuration used in ConfigMap "kubeadm-config" in the "kube-system" Namespace
+[kubelet] Creating a ConfigMap "kubelet-config" in namespace kube-system with the configuration for the kubelets in the cluster
+[upgrade] Backing up kubelet config file to /etc/kubernetes/tmp/kubeadm-kubelet-config3449065048/config.yaml
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[bootstrap-token] Configured RBAC rules to allow Node Bootstrap tokens to get nodes
+[bootstrap-token] Configured RBAC rules to allow Node Bootstrap tokens to post CSRs in order for nodes to get long term certificate credentials
+[bootstrap-token] Configured RBAC rules to allow the csrapprover controller automatically approve CSRs from a Node Bootstrap Token
+[bootstrap-token] Configured RBAC rules to allow certificate rotation for all node client certificates in the cluster
+[addons] Applied essential addon: CoreDNS
+[addons] Applied essential addon: kube-proxy
+
+[upgrade/successful] SUCCESS! Your cluster was upgraded to "v1.30.14". Enjoy!
+
+[upgrade/kubelet] Now that your control plane is upgraded, please proceed with upgrading your kubelets if you haven't already done so.
+
+# kubectl get nodes
+NAME                      STATUS   ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready    control-plane   306d   v1.29.0
+k8s-node1.cricbuzz.net    Ready    <none>          306d   v1.29.0
+k8s-node2.cricbuzz.net    Ready    <none>          306d   v1.29.0
+
+# cd /etc/kubernetes/manifests/
+# sudo vim kube-apiserver.yaml => image: registry.k8s.io/kube-apiserver:v1.30.14
+
+==> Prepare the node for maintenance by marking it unschedulable and evicting the workloads:
+# kubectl drain k8s-master.cricbuzz.net --ignore-daemonsets
+node/k8s-master.cricbuzz.net already cordoned
+Warning: ignoring DaemonSet-managed Pods: kube-system/calico-node-xskb7, kube-system/kube-proxy-wcgq4
+evicting pod monitoring/monitoring-prometheus-node-exporter-ltftm
+evicting pod kube-system/calico-kube-controllers-74d5f9d7bb-x4sm7
+pod/monitoring-prometheus-node-exporter-ltftm evicted
+pod/calico-kube-controllers-74d5f9d7bb-x4sm7 evicted
+node/k8s-master.cricbuzz.net drained
+
+# kubectl get nodes
+NAME                      STATUS                     ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready,SchedulingDisabled   control-plane   306d   v1.29.0
+k8s-node1.cricbuzz.net    Ready                      <none>          306d   v1.29.0
+k8s-node2.cricbuzz.net    Ready                      <none>          306d   v1.29.0
+
+==> Upgrade the kubelet and kubectl:
+# sudo apt-mark unhold kubelet kubectl && \
+sudo apt-get update && sudo apt-get install -y kubelet='1.30.14-1.1' kubectl='1.30.14-1.1' && \
+sudo apt-mark hold kubelet kubectl
+
+==> Restart the kubelet:
+# systemctl status kubelet.service
+# sudo systemctl daemon-reload
+# sudo systemctl restart kubelet
+
+==> Bring the node back online by marking it schedulable:
+# kubectl uncordon k8s-master.cricbuzz.net
+# kubectl get nodes
+NAME                      STATUS   ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready    control-plane   306d   v1.30.14
+k8s-node1.cricbuzz.net    Ready    <none>          306d   v1.29.0
+k8s-node2.cricbuzz.net    Ready    <none>          306d   v1.29.0
+
+========= Worker-1 Upgrade ==============
+# ssh -i ~/.ssh/k8s_key abhay@node1
+# pager /etc/apt/sources.list.d/kubernetes.list => Currently it has repository for version 1.29.
+# sudo vim /etc/apt/sources.list.d/kubernetes.list
+============================================================================================================
+deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /
+============================================================================================================
+
+==> Upgrade kubeadm:
+# sudo apt-mark unhold kubeadm && \
+sudo apt-get update && sudo apt-get install -y kubeadm='1.30.14-1.1' && \
+sudo apt-mark hold kubeadm
+
+==> For worker nodes this upgrades the local kubelet configuration:
+# sudo kubeadm upgrade node
+[upgrade] Reading configuration from the cluster...
+[upgrade] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[preflight] Running pre-flight checks
+[preflight] Skipping prepull. Not a control plane node.
+[upgrade] Skipping phase. Not a control plane node.
+[upgrade] Backing up kubelet config file to /etc/kubernetes/tmp/kubeadm-kubelet-config2546315837/config.yaml
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[upgrade] The configuration for this node was successfully updated!
+[upgrade] Now you should go ahead and upgrade the kubelet package using your package manager.
+
+==> Prepare the node for maintenance by marking it unschedulable and evicting the workloads:
+==> At Master Node-
+# kubectl drain k8s-node1.cricbuzz.net --ignore-daemonsets --force --delete-emptydir-data ==> Added additional paramater (--force --delete-emptydir-data) as command was failing.
+
+# kubectl get nodes
+NAME                      STATUS                     ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready                      control-plane   306d   v1.30.14
+k8s-node1.cricbuzz.net    Ready,SchedulingDisabled   <none>          306d   v1.29.0
+k8s-node2.cricbuzz.net    Ready                      <none>          306d   v1.29.0
+
+==> At Worker-1:
+==> Upgrade the kubelet and kubectl:
+# sudo apt-mark unhold kubelet kubectl && \
+sudo apt-get update && sudo apt-get install -y kubelet='1.30.14-1.1' kubectl='1.30.14-1.1' && \
+sudo apt-mark hold kubelet kubectl
+
+==> Restart the kubelet:
+# sudo systemctl daemon-reload
+# sudo systemctl restart kubelet
+
+==> Bring the node back online by marking it schedulable:
+==> At Master Node-
+# kubectl uncordon k8s-node1.cricbuzz.net
+# kubectl get nodes
+NAME                      STATUS   ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready    control-plane   306d   v1.30.14
+k8s-node1.cricbuzz.net    Ready    <none>          306d   v1.30.14
+k8s-node2.cricbuzz.net    Ready    <none>          306d   v1.29.0
+
+========= Worker-2 Upgrade ==============
+# ssh -i ~/.ssh/k8s_key abhay@node2
+# pager /etc/apt/sources.list.d/kubernetes.list => Currently it has repository for version 1.29.
+# sudo vim /etc/apt/sources.list.d/kubernetes.list
+============================================================================================================
+deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /
+============================================================================================================
+
+==> Upgrade kubeadm:
+# sudo apt-mark unhold kubeadm && \
+sudo apt-get update && sudo apt-get install -y kubeadm='1.30.14-1.1' && \
+sudo apt-mark hold kubeadm
+
+==> For worker nodes this upgrades the local kubelet configuration:
+# sudo kubeadm upgrade node
+[upgrade] Reading configuration from the cluster...
+[upgrade] FYI: You can look at this config file with 'kubectl -n kube-system get cm kubeadm-config -o yaml'
+[preflight] Running pre-flight checks
+[preflight] Skipping prepull. Not a control plane node.
+[upgrade] Skipping phase. Not a control plane node.
+[upgrade] Backing up kubelet config file to /etc/kubernetes/tmp/kubeadm-kubelet-config2546315837/config.yaml
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[upgrade] The configuration for this node was successfully updated!
+[upgrade] Now you should go ahead and upgrade the kubelet package using your package manager.
+
+==> Prepare the node for maintenance by marking it unschedulable and evicting the workloads:
+==> At Master Node-
+# kubectl drain k8s-node2.cricbuzz.net --ignore-daemonsets --force --delete-emptydir-data ==> Added additional paramater (--force --delete-emptydir-data) as command was failing.
+
+# kubectl get nodes
+NAME                      STATUS                     ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready                      control-plane   306d   v1.30.14
+k8s-node1.cricbuzz.net    Ready   					 <none>          306d   v1.29.0
+k8s-node2.cricbuzz.net    Ready,SchedulingDisabled   <none>          306d   v1.29.0
+
+==> At Worker-2:
+==> Upgrade the kubelet and kubectl:
+# sudo apt-mark unhold kubelet kubectl && \
+sudo apt-get update && sudo apt-get install -y kubelet='1.30.14-1.1' kubectl='1.30.14-1.1' && \
+sudo apt-mark hold kubelet kubectl
+
+==> Restart the kubelet:
+# sudo systemctl daemon-reload
+# sudo systemctl restart kubelet
+
+==> Bring the node back online by marking it schedulable:
+==> At Master Node-
+# kubectl uncordon k8s-node1.cricbuzz.net
+# kubectl get nodes
+NAME                      STATUS   ROLES           AGE    VERSION
+k8s-master.cricbuzz.net   Ready    control-plane   306d   v1.30.14
+k8s-node1.cricbuzz.net    Ready    <none>          306d   v1.30.14
+k8s-node2.cricbuzz.net    Ready    <none>          306d   v1.30.14
+
+# kubectl version
+Client Version: v1.30.14
+Kustomize Version: v5.0.4-0.20230601165947-6ce0bf390ce3
+Server Version: v1.30.14
+
+#  kubeadm version
+kubeadm version: &version.Info{Major:"1", Minor:"30", GitVersion:"v1.30.14", GitCommit:"9e18483918821121abdf9aa82bc14d66df5d68cd", GitTreeState:"clean", BuildDate:"2025-06-17T18:34:53Z", GoVersion:"go1.23.10", Compiler:"gc", Platform:"linux/amd64"}
+
+#  kubelet --version
+Kubernetes v1.30.14
+
+==> We are done with Kubernetes cluter upgrade.
