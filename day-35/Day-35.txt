@@ -1,0 +1,116 @@
+# kubectl get all
+NAME                               READY   STATUS    RESTARTS       AGE
+pod/hello-world-76dc6f559c-hvk2x   1/1     Running   2 (102s ago)   4d19h
+
+NAME                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/hello-world   ClusterIP   10.100.13.152   <none>        80/TCP    4d19h
+service/kubernetes    ClusterIP   10.96.0.1       <none>        443/TCP   67d
+
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/hello-world   1/1     1            1           4d19h
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/hello-world-76dc6f559c   1         1         1       4d19h
+
+# kubectl get all -A
+# kubectl get all -A -o yaml > backup.yaml => One way of backup, but is not recommended if we want to restore in future.
+# cd /etc/kubernetes/manifests/
+# ls -ltr
+total 16
+-rw-------. 1 root root 2458 Jul 20 21:30 etcd.yaml
+-rw-------. 1 root root 3382 Jul 20 21:30 kube-apiserver.yaml
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+
+# sudo less etcd.yaml => It has many important details, like certificate files, volume mounts etc.
+# sudo cat etcd.yaml => We will use these fields during backup.
+# cd ~
+======= etcdctl & other binaries setup ==============
+# wget https://github.com/etcd-io/etcd/releases/download/v3.6.5/etcd-v3.6.5-linux-amd64.tar.gz => Downloading the etcd binaries.
+# tar xvfz etcd-v3.6.5-linux-amd64.tar.gz
+# cd etcd-v3.6.5-linux-amd64/
+# ls => Documentation  etcd  etcdctl  etcdutl  README-etcdctl.md  README-etcdutl.md  README.md  READMEv2-etcdctl.md
+# sudo mv etcd etcdctl etcdutl /usr/local/bin/
+# etcdctl version
+etcdctl version: 3.6.5
+API version: 3.6
+
+# ETCDCTL_API=3 etcdctl snapshot => Check available commands for 'etcdctl'. It has just 'save' command.
+# ETCDCTL_API=3 etcdutl snapshot => Check available commands for 'etcdutl'. It has other commands like 'restore' 7 'status'.
+# export ETCDCTL_API=3
+# sudo cat /etc/kubernetes/manifests/etcd.yaml
+# which etcdctl
+/usr/local/bin/etcdctl
+# sudo visudo
+========================================================================================================
+Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin # I have appended /usr/local/bin.
+========================================================================================================
+==> Above was done in order to execute etcd binaries with sudo, else it will give error "command not found".
+# sudo etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key snapshot save /opt/etcd-backup.db => Created the etcd backup.
+# ls /opt/etcd-backup.db
+# du -sh /opt/etcd-backup.db
+7.2M    /opt/etcd-backup.db
+
+# sudo etcdutl --write-out=table snapshot status /opt/etcd-backup.db
++----------+----------+------------+------------+---------+
+|   HASH   | REVISION | TOTAL KEYS | TOTAL SIZE | VERSION |
++----------+----------+------------+------------+---------+
+| 3dff1e07 |    27372 |        668 |     7.5 MB |         |
++----------+----------+------------+------------+---------+
+
+# kubectl get all
+NAME                               READY   STATUS    RESTARTS      AGE
+pod/hello-world-76dc6f559c-hvk2x   1/1     Running   2 (52m ago)   4d20h
+
+NAME                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/hello-world   ClusterIP   10.100.13.152   <none>        80/TCP    4d20h
+service/kubernetes    ClusterIP   10.96.0.1       <none>        443/TCP   67d
+
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/hello-world   1/1     1            1           4d20h
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/hello-world-76dc6f559c   1         1         1       4d20h
+
+# kubectl delete deploy/hello-world
+# kubectl delete svc/hello-world
+# kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   67d
+[abhay@k8s-rocky-master day-35]$
+
+========= Restore the missing objects =========
+# sudo etcdutl snapshot restore /opt/etcd-backup.db --data-dir=/var/lib/etcd-restore-from-backup ==> Here we have changed the data-dir from '/var/lib/etcd'.
+# kubectl get pods
+Unable to connect to the server: stream error: stream ID 1; INTERNAL_ERROR; received from peer
+==> Reason: We still have old data-dir, volumeMounts & mountPaths in etcd.yaml manifest. We need to update it to '/var/lib/etcd-restore-from-backup'. 
+# sudo vim /etc/kubernetes/manifests/etcd.yaml 
+=> Update those fields as:
+===================================================== 
+--data-dir=/var/lib/etcd-restore-from-backup, 
+volumeMounts:
+    - mountPath: /var/lib/etcd-restore-from-backup
+volumes:
+  - hostPath:
+      path: /var/lib/etcd-restore-from-backup
+      type: DirectoryOrCreate
+    name: etcd-data
+=====================================================
+# sudo systemctl restart kubelet.service
+# sudo systemctl daemon-reload
+# sudo systemctl restart kubelet.service
+# kubectl get all
+NAME                               READY   STATUS    RESTARTS      AGE
+pod/hello-world-76dc6f559c-hvk2x   1/1     Running   2 (73m ago)   4d20h
+
+NAME                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/hello-world   ClusterIP   10.100.13.152   <none>        80/TCP    4d20h
+service/kubernetes    ClusterIP   10.96.0.1       <none>        443/TCP   67d
+
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/hello-world   1/1     1            1           4d20h
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/hello-world-76dc6f559c   1         1         1       4d20h
+
+# kubectl describe pod etcd-k8s-rocky-master.cricbuzz.net -n kube-system => Now we have updated data-dir, volumeMounts & mountPaths fields here.
