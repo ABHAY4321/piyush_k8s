@@ -1,0 +1,138 @@
+============ Kubernetes Logging and Monitoring ===============
+# kubectl get nodes
+-------------------------------------------------------------------------
+NAME                            STATUS   ROLES           AGE   VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   74d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          74d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          74d   v1.30.14
+-------------------------------------------------------------------------
+# kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+# kubectl get pods -n kube-system
+------------------------------------------------------------------------------------------------
+metrics-server-7bb66479db-cl2dq                         0/1     Running   0                51s
+------------------------------------------------------------------------------------------------
+# kubectl describe pod -n kube-system metrics-server-7bb66479db-cl2dq
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  4m14s                 default-scheduler  Successfully assigned kube-system/metrics-server-7bb66479db-cl2dq to k8s-rocky-node2.cricbuzz.net
+  Normal   Pulling    4m12s                 kubelet            Pulling image "registry.k8s.io/metrics-server/metrics-server:v0.8.0"
+  Normal   Pulled     3m44s                 kubelet            Successfully pulled image "registry.k8s.io/metrics-server/metrics-server:v0.8.0" in 28.103s (28.103s including waiting). Image size: 22493802 bytes.
+  Normal   Created    3m44s                 kubelet            Created container: metrics-server
+  Normal   Started    3m44s                 kubelet            Started container metrics-server
+  Warning  Unhealthy  24s (x21 over 3m24s)  kubelet            Readiness probe failed: HTTP probe failed with statuscode: 500
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 
+# kubectl logs metrics-server-7bb66479db-cl2dq -n kube-system
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+E1003 08:11:07.150103       1 scraper.go:149] "Failed to scrape node" err="Get \"https://192.168.154.152:10250/metrics/resource\": tls: failed to verify certificate: x509: cannot validate certificate for 192.168.154.152 because it doesn't contain any IP SANs" node="k8s-rocky-node1.cricbuzz.net"
+E1003 08:11:07.169299       1 scraper.go:149] "Failed to scrape node" err="Get \"https://192.168.154.151:10250/metrics/resource\": tls: failed to verify certificate: x509: cannot validate certificate for 192.168.154.151 because it doesn't contain any IP SANs" node="k8s-rocky-master.cricbuzz.net"
+E1003 08:11:07.177410       1 scraper.go:149] "Failed to scrape node" err="Get \"https://192.168.154.153:10250/metrics/resource\": tls: failed to verify certificate: x509: cannot validate certificate for 192.168.154.153 because it doesn't contain any IP SANs" node="k8s-rocky-node2.cricbuzz.net"
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# kubectl get deploy -n kube-system
+------------------------------------------------------------------
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+calico-kube-controllers   1/1     1            1           74d
+coredns                   2/2     2            2           74d
+metrics-server            0/1     1            0           6m42s
+------------------------------------------------------------------
+# kubectl edit deploy -n kube-system metrics-server
+------------------------------------------------------------------------------------------------------------------------------------------------------
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        k8s-app: metrics-server
+    spec:
+      containers:
+      - args:
+        - --kubelet-insecure-tls # Add this line. It Do not verify the CA of serving certificates presented by Kubelets. For testing purposes only.
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+# kubectl get pods -n kube-system
+-------------------------------------------------------------------------------------
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE
+calico-kube-controllers   1/1     1            1           74d
+coredns                   2/2     2            2           74d
+metrics-server            1/1     1            1           12m
+-------------------------------------------------------------------------------------
+# kubectl get pods -n kube-system
+--------------------------------------------------------------------------------------------
+metrics-server-86d5cc455c-gkhvt                         1/1     Running   0              91s
+--------------------------------------------------------------------------------------------
+# kubectl top node
+-------------------------------------------------------------------------------
+NAME                            CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
+k8s-rocky-master.cricbuzz.net   462m         11%    1985Mi          26%
+k8s-rocky-node1.cricbuzz.net    95m          9%     1026Mi          18%
+k8s-rocky-node2.cricbuzz.net    90m          9%     948Mi           17%
+-------------------------------------------------------------------------------
+# sudo crictl ps
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CONTAINER           IMAGE               CREATED             STATE               NAME                      ATTEMPT             POD ID              POD
+a931c7aa36c93       428d92b022539       3 minutes ago       Running             calico-kube-controllers   15                  b85c5c4d2697f       calico-kube-controllers-564985c589-jp27r
+b73129d43eac7       07d562355feda       3 minutes ago       Running             kube-apiserver            0                   dbfcb408a5521       kube-apiserver-k8s-rocky-master.cricbuzz.net
+5ce97f5876818       097a9f9514c71       5 minutes ago       Running             kube-controller-manager   16                  34235f5524845       kube-controller-manager-k8s-rocky-master.cricbuzz.net
+96e6ca7d108dd       c1f0d1cc8af40       5 minutes ago       Running             kube-scheduler            14                  8c3583470a3e3       kube-scheduler-k8s-rocky-master.cricbuzz.net
+606ab7e1f341f       c69fa2e9cbf5f       49 minutes ago      Running             coredns                   10                  8a32aebdebd51       coredns-55cb58b774-mxzfv
+e465a57e43afb       c69fa2e9cbf5f       49 minutes ago      Running             coredns                   10                  4d6425efa7bee       coredns-55cb58b774-r6s4h
+5ae58fa3af18f       4e42b6f329bc1       50 minutes ago      Running             calico-node               10                  b057efd2106ee       calico-node-t9t6n
+8ab9d1392cb37       709bcab73020c       50 minutes ago      Running             kube-proxy                10                  7d2a2d1b0e738       kube-proxy-2xfc8
+911f95d951316       2e96e5913fc06       50 minutes ago      Running             etcd                      1                   5c54eb9bbc99d       etcd-k8s-rocky-master.cricbuzz.net
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# sudo crictl ps -a
+# cd /etc/kubernetes/manifests/
+# sudo mv kube-apiserver.yaml /home/abhay
+# kubectl get nodes
+-----------------------------------------------------------------------------------------------------------------------
+The connection to the server k8s-rocky-master.cricbuzz.net:6443 was refused - did you specify the right host or port?
+-----------------------------------------------------------------------------------------------------------------------
+# sudo crictl ps | grep api => No O/P.
+# pwd => /etc/kubernetes/manifests/
+# ls -lrt
+------------------------------------------------------------------------
+total 16
+-rw-------. 1 root root 3382 Jul 20 21:30 kube-apiserver.yaml
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+-rw-------. 1 root root 2518 Sep 26 15:54 etcd.yaml
+------------------------------------------------------------------------
+# sudo mv /home/abhay/kube-apiserver.yaml .
+#  ls -lrt
+------------------------------------------------------------------------
+total 16
+-rw-------. 1 root root 3382 Jul 20 21:30 kube-apiserver.yaml
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+-rw-------. 1 root root 2518 Sep 26 15:54 etcd.yaml
+------------------------------------------------------------------------
+# sudo crictl ps | grep api
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+b73129d43eac7       07d562355feda       24 seconds ago      Running             kube-apiserver            0                   dbfcb408a5521       kube-apiserver-k8s-rocky-master.cricbuzz.net
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# sudo crictl ps
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CONTAINER           IMAGE               CREATED             STATE               NAME                      ATTEMPT             POD ID              POD
+a931c7aa36c93       428d92b022539       3 minutes ago       Running             calico-kube-controllers   15                  b85c5c4d2697f       calico-kube-controllers-564985c589-jp27r
+b73129d43eac7       07d562355feda       3 minutes ago       Running             kube-apiserver            0                   dbfcb408a5521       kube-apiserver-k8s-rocky-master.cricbuzz.net
+5ce97f5876818       097a9f9514c71       5 minutes ago       Running             kube-controller-manager   16                  34235f5524845       kube-controller-manager-k8s-rocky-master.cricbuzz.net
+96e6ca7d108dd       c1f0d1cc8af40       5 minutes ago       Running             kube-scheduler            14                  8c3583470a3e3       kube-scheduler-k8s-rocky-master.cricbuzz.net
+606ab7e1f341f       c69fa2e9cbf5f       49 minutes ago      Running             coredns                   10                  8a32aebdebd51       coredns-55cb58b774-mxzfv
+e465a57e43afb       c69fa2e9cbf5f       49 minutes ago      Running             coredns                   10                  4d6425efa7bee       coredns-55cb58b774-r6s4h
+5ae58fa3af18f       4e42b6f329bc1       50 minutes ago      Running             calico-node               10                  b057efd2106ee       calico-node-t9t6n
+8ab9d1392cb37       709bcab73020c       50 minutes ago      Running             kube-proxy                10                  7d2a2d1b0e738       kube-proxy-2xfc8
+911f95d951316       2e96e5913fc06       50 minutes ago      Running             etcd                      1                   5c54eb9bbc99d       etcd-k8s-rocky-master.cricbuzz.net
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# sudo crictl logs b73129d43eac7
+# sudo crictl logs-f  b73129d43eac7 => Get logs in real time.
