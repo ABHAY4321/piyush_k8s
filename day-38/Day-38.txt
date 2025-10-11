@@ -1,0 +1,449 @@
+============ Problem 1 & Solution ==============
+# vim kube-apiserver.yaml => Creating problem.
+================================================================================================================================
+spec:
+  containers:
+  - command:
+    - kube-apiserverr # Here we have made typo error. We have double 'r' here.
+================================================================================================================================
+# kubectl get nodes
+================================================================================================================================
+The connection to the server k8s-rocky-master.cricbuzz.net:6443 was refused - did you specify the right host or port?
+================================================================================================================================
+# sudo crictl ps | grep api => No O/P.
+# sudo crictl ps -a | grep api
+================================================================================================================================
+ee2dac1038449       07d562355feda       12 seconds ago      Exited              kube-apiserver            1                   3b810c41c9fb6       kube-apiserver-k8s-rocky-master.cricbuzz.net
+================================================================================================================================
+# sudo crictl logs kube-apiserver
+================================================================================================================================
+E1012 00:19:49.396141  103835 remote_runtime.go:432] "ContainerStatus from runtime service failed" err="rpc error: code = NotFound desc = an error occurred when try to find container \"kube-apiserver\": not found" containerID="kube-apiserver"
+FATA[0000] rpc error: code = NotFound desc = an error occurred when try to find container "kube-apiserver": not found
+================================================================================================================================
+# ls /var/log/containers/ | grep api => No O/P.
+# cd /etc/kubernetes/manifests
+# ls -ltr
+================================================================================================================================
+total 16
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+-rw-------. 1 root root 2518 Sep 26 15:54 etcd.yaml
+-rw-------. 1 root root 3382 Oct 12 00:21 kube-apiserver.yaml
+================================================================================================================================
+# sudo vim kube-apiserver.yaml
+================================================================================================================================
+spec:
+  containers:
+  - command:
+    - kube-apiserverr # Here we have typo error. We have double 'r' here which is the root cause. Rest config file contents are ok. So need to correct it.
+================================================================================================================================
+# sudo crictl ps | grep api
+================================================================================================================================
+5b5d27ed47023       07d562355feda       9 seconds ago       Running             kube-apiserver            0                   9911f1a3ef5b3       kube-apiserver-k8s-rocky-master.cricbuzz.net
+================================================================================================================================
+# kubectl get nodes
+================================================================================================================================
+NAME                            STATUS   ROLES           AGE   VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   83d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          83d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          83d   v1.30.14
+================================================================================================================================
+
+============ Problem 2 & Solution ==============
+# export KUBECONFIG=/tmp/config => Creating problem.
+# kubectl get nodes
+========================================================================================================================================
+E1012 00:31:46.485569  112292 memcache.go:265] couldn't get current server API group list: Get "http://localhost:8080/api?timeout=32s": dial tcp [::1]:8080: connect: connection refused
+E1012 00:31:46.488837  112292 memcache.go:265] couldn't get current server API group list: Get "http://localhost:8080/api?timeout=32s": dial tcp [::1]:8080: connect: connection refused
+E1012 00:31:46.491050  112292 memcache.go:265] couldn't get current server API group list: Get "http://localhost:8080/api?timeout=32s": dial tcp [::1]:8080: connect: connection refused
+E1012 00:31:46.491997  112292 memcache.go:265] couldn't get current server API group list: Get "http://localhost:8080/api?timeout=32s": dial tcp [::1]:8080: connect: connection refused
+E1012 00:31:46.506084  112292 memcache.go:265] couldn't get current server API group list: Get "http://localhost:8080/api?timeout=32s": dial tcp [::1]:8080: connect: connection refused
+The connection to the server localhost:8080 was refused - did you specify the right host or port?
+========================================================================================================================================
+# sudo crictl ps | grep api
+========================================================================================================================================
+5b5d27ed47023       07d562355feda       10 minutes ago      Running             kube-apiserver            0                   9911f1a3ef5b3       kube-apiserver-k8s-rocky-master.cricbuzz.net
+========================================================================================================================================
+# ls -ltr /etc/kubernetes/
+========================================================================================================================================
+total 40
+drwxr-xr-x. 3 root root 4096 Jul 20 21:30 pki
+-rw-------. 1 root root 5669 Jul 20 21:30 admin.conf
+-rw-------. 1 root root 5697 Jul 20 21:30 super-admin.conf
+-rw-------. 1 root root 5683 Jul 20 21:30 controller-manager.conf
+-rw-------. 1 root root 5631 Jul 20 21:30 scheduler.conf
+-rw-------. 1 root root 2077 Jul 20 21:30 kubelet.conf
+drwxr-xr-x. 2 root root  113 Oct 12 00:29 manifests
+========================================================================================================================================
+# sudo kubectl get nodes --kubeconfig /etc/kubernetes/admin.conf
+========================================================================================================================================
+NAME                            STATUS   ROLES           AGE   VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   83d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          83d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          83d   v1.30.14
+========================================================================================================================================
+==> Using admin.conf file, able to see the desired output.
+# cd $HOME/.kube/
+# ls -ltr
+========================================================================================================================================
+total 24
+-rw-------. 1 abhay abhay  5669 Jul 20 21:31 config
+drwxr-x---. 4 abhay abhay    35 Jul 20 21:46 cache
+-rw-r--r--. 1 abhay abhay 12405 Sep 16 15:07 kubecom.sh
+========================================================================================================================================
+==> Here we have 'config' file. If it is missing, we can copy 'admin.conf' file here and change the file permission for standard user.
+# export KUBECONFIG=$HOME/.kube/config
+# kubectl get nodes
+========================================================================================================================================
+NAME                            STATUS   ROLES           AGE   VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   83d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          83d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          83d   v1.30.14
+========================================================================================================================================
+
+============ Problem 3 & Solution ==============
+# cd /etc/kubernetes/manifests/
+# ls -ltr
+========================================================================================================================================
+total 16
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+-rw-------. 1 root root 2518 Sep 26 15:54 etcd.yaml
+-rw-------. 1 root root 3382 Oct 12 00:21 kube-apiserver.yaml
+========================================================================================================================================
+# sudo vim kube-scheduler.yaml => Creating problem.
+========================================================================================================================================
+I have changed image: registry.k8s.io/kube-scheduler:v1.30.14 to image: registry.k8s.io/kube-scheduler:v1.30.1400
+========================================================================================================================================
+# kubectl run nginx --image=nginx
+# kubectl get pods
+========================================================================================================================================
+NAME                      READY   STATUS    RESTARTS   AGE
+nginx                     0/1     Pending   0          6s
+========================================================================================================================================
+# kubectl describe pod nginx
+========================================================================================================================================
+Node:             <none>
+Events:           <none>
+========================================================================================================================================
+# kubectl get pods -n kube-system
+========================================================================================================================================
+NAME                                                    READY   STATUS         RESTARTS        AGE
+calico-kube-controllers-564985c589-jp27r                1/1     Running        23 (33m ago)    83d
+calico-node-5fn8x                                       1/1     Running        14 (43m ago)    83d
+calico-node-m7wnt                                       1/1     Running        14 (43m ago)    83d
+calico-node-t9t6n                                       1/1     Running        14 (3h2m ago)   83d
+coredns-55cb58b774-mxzfv                                1/1     Running        14 (3h2m ago)   83d
+coredns-55cb58b774-r6s4h                                1/1     Running        14 (3h2m ago)   83d
+etcd-k8s-rocky-master.cricbuzz.net                      1/1     Running        5 (3h2m ago)    15d
+kube-apiserver-k8s-rocky-master.cricbuzz.net            1/1     Running        0               83d
+kube-controller-manager-k8s-rocky-master.cricbuzz.net   1/1     Running        21 (37m ago)    83d
+kube-proxy-2xfc8                                        1/1     Running        14 (3h2m ago)   83d
+kube-proxy-65nlg                                        1/1     Running        14 (43m ago)    83d
+kube-proxy-v66cq                                        1/1     Running        14 (43m ago)    83d
+kube-scheduler-k8s-rocky-master.cricbuzz.net            0/1     ErrImagePull   0               103s
+metrics-server-86d5cc455c-znql5                         1/1     Running        0               169m
+========================================================================================================================================
+# kubectl logs kube-scheduler-k8s-rocky-master.cricbuzz.net -n kube-system
+========================================================================================================================================
+Error from server (BadRequest): container "kube-scheduler" in pod "kube-scheduler-k8s-rocky-master.cricbuzz.net" is waiting to start: trying and failing to pull image
+========================================================================================================================================
+# kubectl describe pod kube-scheduler-k8s-rocky-master.cricbuzz.net -n kube-system
+========================================================================================================================================
+Events:
+  Type     Reason          Age                   From     Message
+  ----     ------          ----                  ----     -------
+  Normal   Pulling         3m19s (x4 over 5m9s)  kubelet  Pulling image "registry.k8s.io/kube-scheduler:v1.30.1400"
+  Warning  Failed          3m14s (x4 over 5m3s)  kubelet  Failed to pull image "registry.k8s.io/kube-scheduler:v1.30.1400": rpc error: code = NotFound desc = failed to pull and unpack image "registry.k8s.io/kube-scheduler:v1.30.1400": failed to resolve reference "registry.k8s.io/kube-scheduler:v1.30.1400": registry.k8s.io/kube-scheduler:v1.30.1400: not found
+  Warning  Failed          3m14s (x4 over 5m3s)  kubelet  Error: ErrImagePull
+  Warning  Failed          2m49s (x6 over 5m2s)  kubelet  Error: ImagePullBackOff
+  Normal   SandboxChanged  2m49s                 kubelet  Pod sandbox changed, it will be killed and re-created.
+  Normal   BackOff         3s (x19 over 5m2s)    kubelet  Back-off pulling image "registry.k8s.io/kube-scheduler:v1.30.1400"
+========================================================================================================================================
+# sudo vim kube-apiserver.yaml
+========================================================================================================================================
+image: registry.k8s.io/kube-apiserver:v1.30.14 # See the image name for the reference.
+========================================================================================================================================
+# sudo vim kube-scheduler.yaml
+========================================================================================================================================
+image: registry.k8s.io/kube-apiserver:v1.30.14 # Have corrected the image name.
+========================================================================================================================================
+# kubectl get pods -n kube-system
+========================================================================================================================================
+NAME                                                    READY   STATUS    RESTARTS        AGE
+calico-kube-controllers-564985c589-jp27r                1/1     Running   23 (36m ago)    83d
+calico-node-5fn8x                                       1/1     Running   14 (46m ago)    83d
+calico-node-m7wnt                                       1/1     Running   14 (46m ago)    83d
+calico-node-t9t6n                                       1/1     Running   14 (3h5m ago)   83d
+coredns-55cb58b774-mxzfv                                1/1     Running   14 (3h5m ago)   83d
+coredns-55cb58b774-r6s4h                                1/1     Running   14 (3h5m ago)   83d
+etcd-k8s-rocky-master.cricbuzz.net                      1/1     Running   5 (3h5m ago)    15d
+kube-apiserver-k8s-rocky-master.cricbuzz.net            1/1     Running   0               83d
+kube-controller-manager-k8s-rocky-master.cricbuzz.net   1/1     Running   21 (40m ago)    83d
+kube-proxy-2xfc8                                        1/1     Running   14 (3h5m ago)   83d
+kube-proxy-65nlg                                        1/1     Running   14 (46m ago)    83d
+kube-proxy-v66cq                                        1/1     Running   14 (46m ago)    83d
+kube-scheduler-k8s-rocky-master.cricbuzz.net            1/1     Running   0               14s
+metrics-server-86d5cc455c-znql5                         1/1     Running   0               171m
+========================================================================================================================================
+# kubectl get pods
+========================================================================================================================================
+NAME                      READY   STATUS    RESTARTS   AGE
+nginx                     1/1     Running   0          7m32s
+========================================================================================================================================
+
+============ Problem 4 & Solution ==============
+# cd /etc/kubernetes/manifests/
+# ls -ltr
+========================================================================================================================================
+total 16
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+-rw-------. 1 root root 2518 Sep 26 15:54 etcd.yaml
+-rw-------. 1 root root 3382 Oct 12 00:21 kube-apiserver.yaml
+========================================================================================================================================
+# sudo vim kube-controller-manager.yaml => Creating problem.
+========================================================================================================================================
+I have changed image: registry.k8s.io/kube-scheduler:v1.30.14 to image: registry.k8s.io/kube-scheduler:v1.30.1400
+========================================================================================================================================
+
+============ Problem 4 & Solution ==============
+# vim deployment.yaml
+===================================================================================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx-crtx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+===================================================================================================================================
+# kubectl apply -f deployment.yaml
+# kubectl get pods
+===================================================================================================================================
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-55649858db-8xgbd   1/1     Running   0          91s
+nginx-deployment-55649858db-ff5q6   1/1     Running   0          91s
+===================================================================================================================================
+# kubectl get deployments.apps
+===================================================================================================================================
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   2/2     2            2           95s
+===================================================================================================================================
+# cd /etc/kubernetes/manifests/
+# ls -ltr
+========================================================================================================================================
+total 16
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+-rw-------. 1 root root 2518 Sep 26 15:54 etcd.yaml
+-rw-------. 1 root root 3382 Oct 12 00:21 kube-apiserver.yaml
+========================================================================================================================================
+# sudo kube-controller-manager.yaml => Creating problem.
+========================================================================================================================================
+spec:
+  containers:
+  - command:
+    - kubee-controller-manager # I have made typo error here under command. In place of 'kube' i used 'kubee'.
+========================================================================================================================================
+# kubectl delete pod nginx-deployment-55649858db-8xgbd
+# kubectl get pods
+===================================================================================================================================
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-55649858db-ff5q6   1/1     Running   0          91s
+===================================================================================================================================
+# kubectl get deployments.apps
+===================================================================================================================================
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   2/2     2            2           95s
+===================================================================================================================================
+# kubectl get pods -n kube-system
+===================================================================================================================================
+NAME                                                    READY   STATUS             RESTARTS         AGE
+calico-kube-controllers-564985c589-jp27r                1/1     Running            23 (71m ago)     83d
+calico-node-5fn8x                                       1/1     Running            14 (81m ago)     83d
+calico-node-m7wnt                                       1/1     Running            14 (81m ago)     83d
+calico-node-t9t6n                                       1/1     Running            14 (3h39m ago)   83d
+coredns-55cb58b774-mxzfv                                1/1     Running            14 (3h39m ago)   83d
+coredns-55cb58b774-r6s4h                                1/1     Running            14 (3h39m ago)   83d
+etcd-k8s-rocky-master.cricbuzz.net                      1/1     Running            5 (3h39m ago)    15d
+kube-apiserver-k8s-rocky-master.cricbuzz.net            1/1     Running            0                83d
+kube-controller-manager-k8s-rocky-master.cricbuzz.net   0/1     CrashLoopBackOff   3 (47s ago)      104s
+kube-proxy-2xfc8                                        1/1     Running            14 (3h39m ago)   83d
+kube-proxy-65nlg                                        1/1     Running            14 (81m ago)     83d
+kube-proxy-v66cq                                        1/1     Running            14 (81m ago)     83d
+kube-scheduler-k8s-rocky-master.cricbuzz.net            1/1     Running            0                34m
+metrics-server-86d5cc455c-znql5                         1/1     Running            0                3h26m
+===================================================================================================================================
+# kubectl logs kube-controller-manager-k8s-rocky-master.cricbuzz.net -n kube-system => No logs here.
+# kubectl describe pod kube-controller-manager-k8s-rocky-master.cricbuzz.net -n kube-system
+===================================================================================================================================
+Events:
+  Type     Reason   Age                   From     Message
+  ----     ------   ----                  ----     -------
+  Normal   Pulled   88s (x4 over 2m25s)   kubelet  Container image "registry.k8s.io/kube-controller-manager:v1.30.14" already present on machine
+  Normal   Created  88s (x4 over 2m25s)   kubelet  Created container: kube-controller-manager
+  Warning  Failed   88s (x4 over 2m24s)   kubelet  Error: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: "kubee-controller-manager": executable file not found in $PATH: unknown
+  Warning  BackOff  57s (x13 over 2m23s)  kubelet  Back-off restarting failed container kube-controller-manager in pod kube-controller-manager-k8s-rocky-master.cricbuzz.net_kube-system(dc90244ddc98a71e486b5589c1c416dd)
+===================================================================================================================================
+# sudo vim /etc/kubernetes/manifests/kube-controller-manager.yaml
+===================================================================================================================================
+spec:
+  containers:
+  - command:
+    - kube-controller-manager # I have corrected the typo.
+===================================================================================================================================
+# kubectl get pods -n kube-system
+===================================================================================================================================
+NAME                                                    READY   STATUS    RESTARTS         AGE
+calico-kube-controllers-564985c589-jp27r                1/1     Running   23 (84m ago)     83d
+calico-node-5fn8x                                       1/1     Running   14 (94m ago)     83d
+calico-node-m7wnt                                       1/1     Running   14 (94m ago)     83d
+calico-node-t9t6n                                       1/1     Running   14 (3h53m ago)   83d
+coredns-55cb58b774-mxzfv                                1/1     Running   14 (3h53m ago)   83d
+coredns-55cb58b774-r6s4h                                1/1     Running   14 (3h53m ago)   83d
+etcd-k8s-rocky-master.cricbuzz.net                      1/1     Running   5 (3h53m ago)    15d
+kube-apiserver-k8s-rocky-master.cricbuzz.net            1/1     Running   0                83d
+kube-controller-manager-k8s-rocky-master.cricbuzz.net   1/1     Running   0                9m14s
+kube-proxy-2xfc8                                        1/1     Running   14 (3h53m ago)   83d
+kube-proxy-65nlg                                        1/1     Running   14 (94m ago)     83d
+kube-proxy-v66cq                                        1/1     Running   14 (94m ago)     83d
+kube-scheduler-k8s-rocky-master.cricbuzz.net            1/1     Running   0                48m
+metrics-server-86d5cc455c-znql5                         1/1     Running   0                3h39m
+===================================================================================================================================
+# kubectl get pods
+===================================================================================================================================
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-55649858db-ff5q6   1/1     Running   0          8m10s
+nginx-deployment-55649858db-d7469   1/1     Running   0          90s
+===================================================================================================================================
+
+============ Problem 5 & Solution ==============
+# kubectl get pods
+========================================================================================================================================
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-55649858db-d7469   1/1     Running   0          27m
+nginx-deployment-55649858db-jd8f5   1/1     Running   0          19m
+========================================================================================================================================
+# kubectl get deployments.apps
+========================================================================================================================================
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   2/2     2            2           38m
+========================================================================================================================================
+# cd /etc/kubernetes/manifests/
+# ls -ltr
+========================================================================================================================================
+total 16
+-rw-------. 1 root root 2764 Jul 20 21:30 kube-controller-manager.yaml
+-rw-------. 1 root root 1464 Jul 20 21:30 kube-scheduler.yaml
+-rw-------. 1 root root 2518 Sep 26 15:54 etcd.yaml
+-rw-------. 1 root root 3382 Oct 12 00:21 kube-apiserver.yaml
+========================================================================================================================================
+# sudo kube-controller-manager.yaml => Creating problem.
+========================================================================================================================================
+	volumeMounts:
+	- mountPath: /etc/kubernetes/pki
+      name: k8s-certs
+      readOnly: true
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/pk	# Here we made typo error. In place of 'pki', we mentioned 'pk'.
+      type: DirectoryOrCreate
+    name: k8s-certs
+========================================================================================================================================
+# kubectl scale deployment nginx-deployment --replicas=4
+========================================================================================================================================
+deployment.apps/nginx-deployment scaled
+========================================================================================================================================
+# kubectl get pods
+========================================================================================================================================
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-55649858db-d7469   1/1     Running   0          27m
+nginx-deployment-55649858db-jd8f5   1/1     Running   0          19m
+========================================================================================================================================
+# kubectl get deployments.apps
+========================================================================================================================================
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   2/4     2            2           38m
+========================================================================================================================================
+# kubectl get pods -n kube-system
+========================================================================================================================================
+NAME                                                    READY   STATUS             RESTARTS        AGE
+calico-kube-controllers-564985c589-jp27r                1/1     Running            23 (96m ago)    83d
+calico-node-5fn8x                                       1/1     Running            14 (106m ago)   83d
+calico-node-m7wnt                                       1/1     Running            14 (106m ago)   83d
+calico-node-t9t6n                                       1/1     Running            14 (4h5m ago)   83d
+coredns-55cb58b774-mxzfv                                1/1     Running            14 (4h5m ago)   83d
+coredns-55cb58b774-r6s4h                                1/1     Running            14 (4h5m ago)   83d
+etcd-k8s-rocky-master.cricbuzz.net                      1/1     Running            5 (4h5m ago)    15d
+kube-apiserver-k8s-rocky-master.cricbuzz.net            1/1     Running            0               83d
+kube-controller-manager-k8s-rocky-master.cricbuzz.net   0/1     CrashLoopBackOff   5 (2m3s ago)    5m31s
+kube-proxy-2xfc8                                        1/1     Running            14 (4h5m ago)   83d
+kube-proxy-65nlg                                        1/1     Running            14 (106m ago)   83d
+kube-proxy-v66cq                                        1/1     Running            14 (106m ago)   83d
+kube-scheduler-k8s-rocky-master.cricbuzz.net            1/1     Running            0               60m
+metrics-server-86d5cc455c-znql5                         1/1     Running            0               3h51m
+========================================================================================================================================
+# kubectl logs kube-controller-manager-k8s-rocky-master.cricbuzz.net -n kube-system
+========================================================================================================================================
+I1011 20:26:45.220752       1 serving.go:380] Generated self-signed cert in-memory
+E1011 20:26:48.288932       1 run.go:74] "command failed" err="unable to load client CA provider: open /etc/kubernetes/pki/ca.crt: no such file or directory"
+========================================================================================================================================
+# sudo kube-controller-manager.yaml => Creating problem.
+========================================================================================================================================
+	volumeMounts:
+	- mountPath: /etc/kubernetes/pki
+      name: k8s-certs
+      readOnly: true
+  volumes:
+  - hostPath:
+      path: /etc/kubernetes/pki	# Have corrected our mistake.
+      type: DirectoryOrCreate
+    name: k8s-certs
+========================================================================================================================================
+# kubectl get pods -n kube-system
+========================================================================================================================================
+NAME                                                    READY   STATUS    RESTARTS         AGE
+calico-kube-controllers-564985c589-jp27r                1/1     Running   23 (102m ago)    83d
+calico-node-5fn8x                                       1/1     Running   14 (112m ago)    83d
+calico-node-m7wnt                                       1/1     Running   14 (112m ago)    83d
+calico-node-t9t6n                                       1/1     Running   14 (4h11m ago)   83d
+coredns-55cb58b774-mxzfv                                1/1     Running   14 (4h11m ago)   83d
+coredns-55cb58b774-r6s4h                                1/1     Running   14 (4h11m ago)   83d
+etcd-k8s-rocky-master.cricbuzz.net                      1/1     Running   5 (4h11m ago)    15d
+kube-apiserver-k8s-rocky-master.cricbuzz.net            1/1     Running   0                83d
+kube-controller-manager-k8s-rocky-master.cricbuzz.net   1/1     Running   0                4m46s
+kube-proxy-2xfc8                                        1/1     Running   14 (4h11m ago)   83d
+kube-proxy-65nlg                                        1/1     Running   14 (112m ago)    83d
+kube-proxy-v66cq                                        1/1     Running   14 (112m ago)    83d
+kube-scheduler-k8s-rocky-master.cricbuzz.net            1/1     Running   0                66m
+metrics-server-86d5cc455c-znql5                         1/1     Running   0                3h58m
+========================================================================================================================================
+# kubectl get deployments.apps
+========================================================================================================================================
+NAME               READY   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployment   4/4     4            4           46m
+========================================================================================================================================
+kubectl get pods
+========================================================================================================================================
+NAME                                READY   STATUS    RESTARTS   AGE
+nginx-deployment-55649858db-7kqgb   1/1     Running   0          4m59s
+nginx-deployment-55649858db-d7469   1/1     Running   0          35m
+nginx-deployment-55649858db-jd8f5   1/1     Running   0          27m
+nginx-deployment-55649858db-r4nf2   1/1     Running   0          4m59s
+========================================================================================================================================
+# kubectl cluster-info
