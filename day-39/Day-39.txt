@@ -1,0 +1,98 @@
+# kubectl get nodes
+===========================================================================
+NAME                            STATUS     ROLES           AGE   VERSION
+k8s-rocky-master.cricbuzz.net   Ready      control-plane   96d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    NotReady   <none>          96d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    NotReady   <none>          96d   v1.30.14
+===========================================================================
+============ On Node1 ==========
+# ssh abhay@node1
+# systemctl status kubelet.service
+===================================================================================================================================================
+● kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; preset: disabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: activating (auto-restart) (Result: exit-code) since Sat 2025-10-25 18:20:52 IST; 295ms ago
+       Docs: https://kubernetes.io/docs/
+    Process: 7226 ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS (code=exited, status=1/FAILURE)
+   Main PID: 7226 (code=exited, status=1/FAILURE)
+        CPU: 145ms
+====================================================================================================================================================
+# journalctl -u kubelet.service ==> Look for the error.
+=======================================================================================================================================
+E1025 18:26:20.695611    7737 run.go:74] "command failed" err="failed to construct kubelet dependencies: unable to load client CA file /etc/kubernetes/pki/IAMWRONG.crt: open /etc/kubernetes/pki/IAMWRONG.crt: no such file or directory"
+=======================================================================================================================================
+# cd /etc/kubernetes/pki/
+# ls ==> ca.crt
+# cd /var/lib/kubelet/
+# sudo vim config.yaml
+============================================================================================
+apiVersion: kubelet.config.k8s.io/v1beta1
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 0s
+    enabled: true
+  x509:
+    clientCAFile: /etc/kubernetes/pki/IAMWRONG.crt # Change "IAMWRONG.crt" to "ca.crt"
+=============================================================================================
+# sudo systemctl restart kubelet.service	
+# systemctl status kubelet.service
+=============================================================================================
+● kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; preset: disabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: active (running) since Sat 2025-10-25 18:33:21 IST; 120ms ago
+       Docs: https://kubernetes.io/docs/
+   Main PID: 8315 (kubelet)
+      Tasks: 5 (limit: 35644)
+     Memory: 10.6M
+        CPU: 85ms
+==============================================================================================
+==> Use CTRL+D to exit from node1.
+# kubectl get nodes
+NAME                            STATUS     ROLES           AGE   VERSION
+k8s-rocky-master.cricbuzz.net   Ready      control-plane   96d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready      <none>          96d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    NotReady   <none>          96d   v1.30.14
+==> Now node1 is Ready.
+
+============ On Node2 ==========
+# ssh abhay@node2
+# systemctl status kubelet.service
+===================================================================================================================================================
+○ kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; preset: disabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: inactive (dead) since Sat 2025-10-25 18:20:24 IST; 14min ago
+   Duration: 13min 12.054s
+       Docs: https://kubernetes.io/docs/
+    Process: 1062 ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS (code=exited, status=0/SUCCESS)
+   Main PID: 1062 (code=exited, status=0/SUCCESS)
+        CPU: 14.571s
+====================================================================================================================================================
+# sudo systemctl start kubelet.service
+# systemctl status kubelet.service
+==============================================================================================
+● kubelet.service - kubelet: The Kubernetes Node Agent
+     Loaded: loaded (/usr/lib/systemd/system/kubelet.service; enabled; preset: disabled)
+    Drop-In: /usr/lib/systemd/system/kubelet.service.d
+             └─10-kubeadm.conf
+     Active: active (running) since Sat 2025-10-25 18:35:04 IST; 2s ago
+       Docs: https://kubernetes.io/docs/
+   Main PID: 7565 (kubelet)
+      Tasks: 8 (limit: 35644)
+     Memory: 29.7M
+        CPU: 596ms
+==============================================================================================
+==> Use CTRL+D to exit from node2.
+# kubectl get nodes
+NAME                            STATUS   ROLES           AGE   VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   96d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          96d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          96d   v1.30.14
+
