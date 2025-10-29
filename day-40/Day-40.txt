@@ -1,0 +1,80 @@
+# kubectl get nodes
+=========================================================================
+NAME                            STATUS   ROLES           AGE    VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   100d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          100d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          100d   v1.30.14
+=========================================================================
+# kubectl get nodes -o json => Get in json format which has a lot of details. Kubectl convert it into human readable format.
+# kubectl get nodes -o yaml => Get in yaml format.
+# kubectl apply -f pod.yaml
+# kubectl get pods
+=========================================
+NAME    READY   STATUS    RESTARTS   AGE
+nginx   1/1     Running   0          2m2s
+=========================================
+# kubectl get pods -o json
+# kubectl get pods -o json > pod1.json => To see indentation in app like VS Code.
+# kubectl get pods -o=jsonpath='{.items[0].metadata.labels}{"\n"}' 
+=================
+{"run":"nginx"}
+=================
+# kubectl get pods -o=jsonpath='{.items[0].spec.containers[0].image}{"\n"}'
+=================
+nginx
+=================
+# kubectl get pods -o=jsonpath='{.items[0].spec.containers[0].volumeMounts[0].mountPath}{"\n"}'
+===============================================
+/var/run/secrets/kubernetes.io/serviceaccount
+===============================================
+# kubectl get nodes -o=jsonpath='{.items[*].metadata.name}{"\n"}'
+========================================================================================
+k8s-rocky-master.cricbuzz.net k8s-rocky-node1.cricbuzz.net k8s-rocky-node2.cricbuzz.net
+========================================================================================
+# kubectl get nodes -o='custom-columns=Node:{.metadata.name}'
+=================================
+Node
+k8s-rocky-master.cricbuzz.net
+k8s-rocky-node1.cricbuzz.net
+k8s-rocky-node2.cricbuzz.net
+=================================
+# kubectl get nodes -o='custom-columns=Node:{.metadata.name},IP:{.status.addresses[*].address}'
+================================================================================
+Node                            IP
+k8s-rocky-master.cricbuzz.net   192.168.154.151,k8s-rocky-master.cricbuzz.net
+k8s-rocky-node1.cricbuzz.net    192.168.154.152,k8s-rocky-node1.cricbuzz.net
+k8s-rocky-node2.cricbuzz.net    192.168.154.153,k8s-rocky-node2.cricbuzz.net
+================================================================================
+# kubectl get nodes -o='custom-columns=Node:{.metadata.name},IP:{.status.addresses[?(@.type=="InternalIP")].address}'
+================================================
+Node                            IP
+k8s-rocky-master.cricbuzz.net   192.168.154.151
+k8s-rocky-node1.cricbuzz.net    192.168.154.152
+k8s-rocky-node2.cricbuzz.net    192.168.154.153
+================================================
+# kubectl get nodes --sort-by=.metadata.name
+========================================================================
+NAME                            STATUS   ROLES           AGE    VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   100d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          100d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          100d   v1.30.14
+========================================================================
+# kubectl get pods
+=============================================
+NAME     READY   STATUS    RESTARTS   AGE
+anginx   1/1     Running   0          2m25s
+knginx   1/1     Running   0          2m4s
+nginx    1/1     Running   0          52m
+pnginx   1/1     Running   0          2m12s
+rnginx   1/1     Running   0          2m18s
+==============================================
+# kubectl get pods --sort-by=.metadata.creationTimestamp
+===========================================
+NAME     READY   STATUS    RESTARTS   AGE
+nginx    1/1     Running   0          52m
+anginx   1/1     Running   0          2m28s
+rnginx   1/1     Running   0          2m21s
+pnginx   1/1     Running   0          2m15s
+knginx   1/1     Running   0          2m7s
+============================================
+

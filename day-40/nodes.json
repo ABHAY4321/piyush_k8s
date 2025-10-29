@@ -1,0 +1,662 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Node",
+            "metadata": {
+                "annotations": {
+                    "kubeadm.alpha.kubernetes.io/cri-socket": "unix:///var/run/containerd/containerd.sock",
+                    "node.alpha.kubernetes.io/ttl": "0",
+                    "projectcalico.org/IPv4Address": "192.168.154.151/24",
+                    "projectcalico.org/IPv4IPIPTunnelAddr": "172.16.196.128",
+                    "volumes.kubernetes.io/controller-managed-attach-detach": "true"
+                },
+                "creationTimestamp": "2025-07-20T16:00:47Z",
+                "labels": {
+                    "beta.kubernetes.io/arch": "amd64",
+                    "beta.kubernetes.io/os": "linux",
+                    "kubernetes.io/arch": "amd64",
+                    "kubernetes.io/hostname": "k8s-rocky-master.cricbuzz.net",
+                    "kubernetes.io/os": "linux",
+                    "node-role.kubernetes.io/control-plane": "",
+                    "node.kubernetes.io/exclude-from-external-load-balancers": ""
+                },
+                "name": "k8s-rocky-master.cricbuzz.net",
+                "resourceVersion": "90117",
+                "uid": "f80b8227-61c1-469b-aa5d-12fbbf73763e"
+            },
+            "spec": {
+                "taints": [
+                    {
+                        "effect": "NoSchedule",
+                        "key": "node-role.kubernetes.io/control-plane"
+                    }
+                ]
+            },
+            "status": {
+                "addresses": [
+                    {
+                        "address": "192.168.154.151",
+                        "type": "InternalIP"
+                    },
+                    {
+                        "address": "k8s-rocky-master.cricbuzz.net",
+                        "type": "Hostname"
+                    }
+                ],
+                "allocatable": {
+                    "cpu": "4",
+                    "ephemeral-storage": "33802581141",
+                    "hugepages-1Gi": "0",
+                    "hugepages-2Mi": "0",
+                    "memory": "7730328Ki",
+                    "pods": "110"
+                },
+                "capacity": {
+                    "cpu": "4",
+                    "ephemeral-storage": "36678148Ki",
+                    "hugepages-1Gi": "0",
+                    "hugepages-2Mi": "0",
+                    "memory": "7832728Ki",
+                    "pods": "110"
+                },
+                "conditions": [
+                    {
+                        "lastHeartbeatTime": "2025-10-29T09:20:58Z",
+                        "lastTransitionTime": "2025-10-29T09:20:58Z",
+                        "message": "Calico is running on this node",
+                        "reason": "CalicoIsUp",
+                        "status": "False",
+                        "type": "NetworkUnavailable"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:15Z",
+                        "lastTransitionTime": "2025-07-20T16:00:43Z",
+                        "message": "kubelet has sufficient memory available",
+                        "reason": "KubeletHasSufficientMemory",
+                        "status": "False",
+                        "type": "MemoryPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:15Z",
+                        "lastTransitionTime": "2025-07-20T16:00:43Z",
+                        "message": "kubelet has no disk pressure",
+                        "reason": "KubeletHasNoDiskPressure",
+                        "status": "False",
+                        "type": "DiskPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:15Z",
+                        "lastTransitionTime": "2025-07-20T16:00:43Z",
+                        "message": "kubelet has sufficient PID available",
+                        "reason": "KubeletHasSufficientPID",
+                        "status": "False",
+                        "type": "PIDPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:15Z",
+                        "lastTransitionTime": "2025-09-26T10:28:19Z",
+                        "message": "kubelet is posting ready status",
+                        "reason": "KubeletReady",
+                        "status": "True",
+                        "type": "Ready"
+                    }
+                ],
+                "daemonEndpoints": {
+                    "kubeletEndpoint": {
+                        "Port": 10250
+                    }
+                },
+                "images": [
+                    {
+                        "names": [
+                            "docker.io/calico/node@sha256:385bf6391fea031649b8575799248762a2caece86e6e3f33ffee19c0c096e6a8",
+                            "docker.io/calico/node:v3.28.0"
+                        ],
+                        "sizeBytes": 115239232
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/cni@sha256:cef0c907b8f4cadc63701d371e6f24d325795bcf0be84d6a517e33000ff35f70",
+                            "docker.io/calico/cni:v3.28.0"
+                        ],
+                        "sizeBytes": 94536228
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/cni@sha256:d17e907f27956d82e978f4aee8c21f876230955f3fba51da621c7c49e71f2ece",
+                            "docker.io/calico/cni:v3.27.2"
+                        ],
+                        "sizeBytes": 88207522
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/etcd@sha256:a6dc63e6e8cfa0307d7851762fa6b629afb18f28d8aa3fab5a6e91b4af60026a",
+                            "registry.k8s.io/etcd:3.5.15-0"
+                        ],
+                        "sizeBytes": 56909194
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/kube-controllers@sha256:8f04e4772a2b3fa752bc7fb98cc89c7fa0ab88a341115ee8c5b6faa4180053fd",
+                            "docker.io/calico/kube-controllers:v3.28.0"
+                        ],
+                        "sizeBytes": 34954139
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/kube-apiserver@sha256:be079fe85d6b6804b89ab4fdd6a35cd56341e99ea809881cfe37962f440dc1be",
+                            "registry.k8s.io/kube-apiserver:v1.30.14"
+                        ],
+                        "sizeBytes": 32787876
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/kube-controller-manager@sha256:eba41d76b6af10af941147e2b449c6d68eaa42c1fd0fc8f0ab8ec2ff0ab84964",
+                            "registry.k8s.io/kube-controller-manager:v1.30.14"
+                        ],
+                        "sizeBytes": 31218619
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/kube-proxy@sha256:ac095b8ab9589fcd394702da0809fb3fa844beb04fe909e8df59dc141ef8b63b",
+                            "registry.k8s.io/kube-proxy:v1.30.14"
+                        ],
+                        "sizeBytes": 29213972
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/kube-scheduler@sha256:74a5cf9cfa9fcc2246f68c650f1f5c7add20da2145f13800fd97ba1d69fc06c8",
+                            "registry.k8s.io/kube-scheduler:v1.30.14"
+                        ],
+                        "sizeBytes": 19507319
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/coredns/coredns@sha256:9caabbf6238b189a65d0d6e6ac138de60d6a1c419e5a341fbbb7c78382559c6e",
+                            "registry.k8s.io/coredns/coredns:v1.11.3"
+                        ],
+                        "sizeBytes": 18562039
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/pause@sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097",
+                            "registry.k8s.io/pause:3.9"
+                        ],
+                        "sizeBytes": 321520
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/pause@sha256:9001185023633d17a2f98ff69b6ff2615b8ea02a825adffa40422f51dfdcde9d",
+                            "registry.k8s.io/pause:3.8"
+                        ],
+                        "sizeBytes": 311286
+                    }
+                ],
+                "nodeInfo": {
+                    "architecture": "amd64",
+                    "bootID": "17174276-45a6-49fb-95b7-32ec2919568d",
+                    "containerRuntimeVersion": "containerd://1.7.27",
+                    "kernelVersion": "5.14.0-570.26.1.el9_6.x86_64",
+                    "kubeProxyVersion": "v1.30.14",
+                    "kubeletVersion": "v1.30.14",
+                    "machineID": "f9eb588b15e14e7eb4efe3babc6c0634",
+                    "operatingSystem": "linux",
+                    "osImage": "Rocky Linux 9.6 (Blue Onyx)",
+                    "systemUUID": "43cd4d56-f8b8-cc1f-3698-fe75279a3a62"
+                }
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Node",
+            "metadata": {
+                "annotations": {
+                    "kubeadm.alpha.kubernetes.io/cri-socket": "unix:///var/run/containerd/containerd.sock",
+                    "node.alpha.kubernetes.io/ttl": "0",
+                    "projectcalico.org/IPv4Address": "192.168.154.152/24",
+                    "projectcalico.org/IPv4IPIPTunnelAddr": "172.16.226.128",
+                    "volumes.kubernetes.io/controller-managed-attach-detach": "true"
+                },
+                "creationTimestamp": "2025-07-20T16:02:00Z",
+                "labels": {
+                    "beta.kubernetes.io/arch": "amd64",
+                    "beta.kubernetes.io/os": "linux",
+                    "kubernetes.io/arch": "amd64",
+                    "kubernetes.io/hostname": "k8s-rocky-node1.cricbuzz.net",
+                    "kubernetes.io/os": "linux"
+                },
+                "name": "k8s-rocky-node1.cricbuzz.net",
+                "resourceVersion": "90157",
+                "uid": "d2a1b25d-5f5a-420a-80e4-fe801bc7f6f5"
+            },
+            "spec": {},
+            "status": {
+                "addresses": [
+                    {
+                        "address": "192.168.154.152",
+                        "type": "InternalIP"
+                    },
+                    {
+                        "address": "k8s-rocky-node1.cricbuzz.net",
+                        "type": "Hostname"
+                    }
+                ],
+                "allocatable": {
+                    "cpu": "1",
+                    "ephemeral-storage": "33802581141",
+                    "hugepages-1Gi": "0",
+                    "hugepages-2Mi": "0",
+                    "memory": "5665904Ki",
+                    "pods": "110"
+                },
+                "capacity": {
+                    "cpu": "1",
+                    "ephemeral-storage": "36678148Ki",
+                    "hugepages-1Gi": "0",
+                    "hugepages-2Mi": "0",
+                    "memory": "5768304Ki",
+                    "pods": "110"
+                },
+                "conditions": [
+                    {
+                        "lastHeartbeatTime": "2025-10-29T09:21:57Z",
+                        "lastTransitionTime": "2025-10-29T09:21:57Z",
+                        "message": "Calico is running on this node",
+                        "reason": "CalicoIsUp",
+                        "status": "False",
+                        "type": "NetworkUnavailable"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:39Z",
+                        "lastTransitionTime": "2025-10-25T13:03:22Z",
+                        "message": "kubelet has sufficient memory available",
+                        "reason": "KubeletHasSufficientMemory",
+                        "status": "False",
+                        "type": "MemoryPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:39Z",
+                        "lastTransitionTime": "2025-10-25T13:03:22Z",
+                        "message": "kubelet has no disk pressure",
+                        "reason": "KubeletHasNoDiskPressure",
+                        "status": "False",
+                        "type": "DiskPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:39Z",
+                        "lastTransitionTime": "2025-10-25T13:03:22Z",
+                        "message": "kubelet has sufficient PID available",
+                        "reason": "KubeletHasSufficientPID",
+                        "status": "False",
+                        "type": "PIDPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:39Z",
+                        "lastTransitionTime": "2025-10-29T09:21:06Z",
+                        "message": "kubelet is posting ready status",
+                        "reason": "KubeletReady",
+                        "status": "True",
+                        "type": "Ready"
+                    }
+                ],
+                "daemonEndpoints": {
+                    "kubeletEndpoint": {
+                        "Port": 10250
+                    }
+                },
+                "images": [
+                    {
+                        "names": [
+                            "registry.k8s.io/ingress-nginx/controller@sha256:1f7eaeb01933e719c8a9f4acd8181e555e582330c7d50f24484fb64d2ba9b2ef"
+                        ],
+                        "sizeBytes": 115287729
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/node@sha256:385bf6391fea031649b8575799248762a2caece86e6e3f33ffee19c0c096e6a8",
+                            "docker.io/calico/node:v3.28.0"
+                        ],
+                        "sizeBytes": 115239232
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/postgres@sha256:6bd113a3de3274beda0f056ebf0d75cf060dc4a493b72bea6f9d810dce63f897",
+                            "docker.io/library/postgres:15-alpine"
+                        ],
+                        "sizeBytes": 108683428
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/cni@sha256:cef0c907b8f4cadc63701d371e6f24d325795bcf0be84d6a517e33000ff35f70",
+                            "docker.io/calico/cni:v3.28.0"
+                        ],
+                        "sizeBytes": 94536228
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/cni@sha256:d17e907f27956d82e978f4aee8c21f876230955f3fba51da621c7c49e71f2ece",
+                            "docker.io/calico/cni:v3.27.2"
+                        ],
+                        "sizeBytes": 88207522
+                    },
+                    {
+                        "names": [
+                            "docker.io/dockersamples/examplevotingapp_worker@sha256:c8a8571065479c12567e8e440836e543d185c678cd4781a32b100f71e8f39c86",
+                            "docker.io/dockersamples/examplevotingapp_worker:latest"
+                        ],
+                        "sizeBytes": 80323769
+                    },
+                    {
+                        "names": [
+                            "docker.io/dockersamples/examplevotingapp_result@sha256:06c50992ab258e1d83406784040842bb920f6938eabac19261e7ec634f878935",
+                            "docker.io/dockersamples/examplevotingapp_result:latest"
+                        ],
+                        "sizeBytes": 77422280
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/nginx@sha256:d5f28ef21aabddd098f3dbc21fe5b7a7d7a184720bc07da0b6c9b9820e97f25e"
+                        ],
+                        "sizeBytes": 72319182
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/nginx@sha256:3b7732505933ca591ce4a6d860cb713ad96a3176b82f7979a8dfa9973486a0d6",
+                            "docker.io/library/nginx:latest"
+                        ],
+                        "sizeBytes": 62706233
+                    },
+                    {
+                        "names": [
+                            "docker.io/dockersamples/examplevotingapp_vote@sha256:7102d3b952ec84e3541ee12e7217e320c52aed60b13501c3158f46376a907466",
+                            "docker.io/dockersamples/examplevotingapp_vote:latest"
+                        ],
+                        "sizeBytes": 56948976
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/kube-proxy@sha256:ac095b8ab9589fcd394702da0809fb3fa844beb04fe909e8df59dc141ef8b63b",
+                            "registry.k8s.io/kube-proxy:v1.30.14"
+                        ],
+                        "sizeBytes": 29213972
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/ingress-nginx/kube-webhook-certgen@sha256:050a34002d5bb4966849c880c56c91f5320372564245733b33d4b3461b4dbd24"
+                        ],
+                        "sizeBytes": 28450888
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/redis@sha256:59b6e694653476de2c992937ebe1c64182af4728e54bb49e9b7a6c26614d8933",
+                            "docker.io/library/redis:alpine"
+                        ],
+                        "sizeBytes": 27504168
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/metrics-server/metrics-server@sha256:89258156d0e9af60403eafd44da9676fd66f600c7934d468ccc17e42b199aee2",
+                            "registry.k8s.io/metrics-server/metrics-server:v0.8.0"
+                        ],
+                        "sizeBytes": 22493802
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/pause@sha256:9001185023633d17a2f98ff69b6ff2615b8ea02a825adffa40422f51dfdcde9d",
+                            "registry.k8s.io/pause:3.8"
+                        ],
+                        "sizeBytes": 311286
+                    }
+                ],
+                "nodeInfo": {
+                    "architecture": "amd64",
+                    "bootID": "27c98fa9-d8ea-4cfa-bcd3-2c3cbf9e7912",
+                    "containerRuntimeVersion": "containerd://1.7.27",
+                    "kernelVersion": "5.14.0-570.26.1.el9_6.x86_64",
+                    "kubeProxyVersion": "v1.30.14",
+                    "kubeletVersion": "v1.30.14",
+                    "machineID": "f9eb588b15e14e7eb4efe3babc6c0634",
+                    "operatingSystem": "linux",
+                    "osImage": "Rocky Linux 9.6 (Blue Onyx)",
+                    "systemUUID": "cb434d56-5b32-e501-2a65-b250d08c5392"
+                }
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Node",
+            "metadata": {
+                "annotations": {
+                    "kubeadm.alpha.kubernetes.io/cri-socket": "unix:///var/run/containerd/containerd.sock",
+                    "node.alpha.kubernetes.io/ttl": "0",
+                    "projectcalico.org/IPv4Address": "192.168.154.153/24",
+                    "projectcalico.org/IPv4IPIPTunnelAddr": "172.16.219.0",
+                    "volumes.kubernetes.io/controller-managed-attach-detach": "true"
+                },
+                "creationTimestamp": "2025-07-20T16:02:03Z",
+                "labels": {
+                    "beta.kubernetes.io/arch": "amd64",
+                    "beta.kubernetes.io/os": "linux",
+                    "kubernetes.io/arch": "amd64",
+                    "kubernetes.io/hostname": "k8s-rocky-node2.cricbuzz.net",
+                    "kubernetes.io/os": "linux"
+                },
+                "name": "k8s-rocky-node2.cricbuzz.net",
+                "resourceVersion": "90186",
+                "uid": "ce0fac69-fa03-4e2f-85dd-f1fd1c166151"
+            },
+            "spec": {},
+            "status": {
+                "addresses": [
+                    {
+                        "address": "192.168.154.153",
+                        "type": "InternalIP"
+                    },
+                    {
+                        "address": "k8s-rocky-node2.cricbuzz.net",
+                        "type": "Hostname"
+                    }
+                ],
+                "allocatable": {
+                    "cpu": "1",
+                    "ephemeral-storage": "33802581141",
+                    "hugepages-1Gi": "0",
+                    "hugepages-2Mi": "0",
+                    "memory": "5665896Ki",
+                    "pods": "110"
+                },
+                "capacity": {
+                    "cpu": "1",
+                    "ephemeral-storage": "36678148Ki",
+                    "hugepages-1Gi": "0",
+                    "hugepages-2Mi": "0",
+                    "memory": "5768296Ki",
+                    "pods": "110"
+                },
+                "conditions": [
+                    {
+                        "lastHeartbeatTime": "2025-10-29T09:21:46Z",
+                        "lastTransitionTime": "2025-10-29T09:21:46Z",
+                        "message": "Calico is running on this node",
+                        "reason": "CalicoIsUp",
+                        "status": "False",
+                        "type": "NetworkUnavailable"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:56Z",
+                        "lastTransitionTime": "2025-10-25T13:05:05Z",
+                        "message": "kubelet has sufficient memory available",
+                        "reason": "KubeletHasSufficientMemory",
+                        "status": "False",
+                        "type": "MemoryPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:56Z",
+                        "lastTransitionTime": "2025-10-25T13:05:05Z",
+                        "message": "kubelet has no disk pressure",
+                        "reason": "KubeletHasNoDiskPressure",
+                        "status": "False",
+                        "type": "DiskPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:56Z",
+                        "lastTransitionTime": "2025-10-25T13:05:05Z",
+                        "message": "kubelet has sufficient PID available",
+                        "reason": "KubeletHasSufficientPID",
+                        "status": "False",
+                        "type": "PIDPressure"
+                    },
+                    {
+                        "lastHeartbeatTime": "2025-10-29T10:32:56Z",
+                        "lastTransitionTime": "2025-10-29T09:21:29Z",
+                        "message": "kubelet is posting ready status",
+                        "reason": "KubeletReady",
+                        "status": "True",
+                        "type": "Ready"
+                    }
+                ],
+                "daemonEndpoints": {
+                    "kubeletEndpoint": {
+                        "Port": 10250
+                    }
+                },
+                "images": [
+                    {
+                        "names": [
+                            "docker.io/calico/node@sha256:385bf6391fea031649b8575799248762a2caece86e6e3f33ffee19c0c096e6a8",
+                            "docker.io/calico/node:v3.28.0"
+                        ],
+                        "sizeBytes": 115239232
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/postgres@sha256:52af010baaeb34a287e7b5ea9696720727bd5bace64f9c18068ee187a6d6a4b2",
+                            "docker.io/library/postgres:15-alpine"
+                        ],
+                        "sizeBytes": 111156707
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/cni@sha256:cef0c907b8f4cadc63701d371e6f24d325795bcf0be84d6a517e33000ff35f70",
+                            "docker.io/calico/cni:v3.28.0"
+                        ],
+                        "sizeBytes": 94536228
+                    },
+                    {
+                        "names": [
+                            "docker.io/calico/cni@sha256:d17e907f27956d82e978f4aee8c21f876230955f3fba51da621c7c49e71f2ece",
+                            "docker.io/calico/cni:v3.27.2"
+                        ],
+                        "sizeBytes": 88207522
+                    },
+                    {
+                        "names": [
+                            "docker.io/dockersamples/examplevotingapp_worker@sha256:c8a8571065479c12567e8e440836e543d185c678cd4781a32b100f71e8f39c86",
+                            "docker.io/dockersamples/examplevotingapp_worker:latest"
+                        ],
+                        "sizeBytes": 80323769
+                    },
+                    {
+                        "names": [
+                            "docker.io/dockersamples/examplevotingapp_result@sha256:06c50992ab258e1d83406784040842bb920f6938eabac19261e7ec634f878935",
+                            "docker.io/dockersamples/examplevotingapp_result:latest"
+                        ],
+                        "sizeBytes": 77422280
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/nginx@sha256:d5f28ef21aabddd098f3dbc21fe5b7a7d7a184720bc07da0b6c9b9820e97f25e"
+                        ],
+                        "sizeBytes": 72319182
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/nginx@sha256:3b7732505933ca591ce4a6d860cb713ad96a3176b82f7979a8dfa9973486a0d6"
+                        ],
+                        "sizeBytes": 62706233
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/nginx@sha256:b619c34a163ac12f68c1982568a122c4953dbf3126b8dbf0cc2f6fdbfd85de27",
+                            "docker.io/library/nginx:latest"
+                        ],
+                        "sizeBytes": 59773923
+                    },
+                    {
+                        "names": [
+                            "docker.io/dockersamples/examplevotingapp_vote@sha256:7102d3b952ec84e3541ee12e7217e320c52aed60b13501c3158f46376a907466",
+                            "docker.io/dockersamples/examplevotingapp_vote:latest"
+                        ],
+                        "sizeBytes": 56948976
+                    },
+                    {
+                        "names": [
+                            "docker.io/pinku9627/cka-ingress-demo@sha256:593ec17ebab1bdf3c4eb0b5232778124abeecd2ac2ccd3bad301904eb4c7fdd9",
+                            "docker.io/pinku9627/cka-ingress-demo:v1"
+                        ],
+                        "sizeBytes": 51903225
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/redis@sha256:1c78f5e7512cc8b22b0edc95c20e7abd9e1fd832e5dfd5c3c6b59ce82fb238d0",
+                            "docker.io/library/redis:alpine"
+                        ],
+                        "sizeBytes": 29980893
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/kube-proxy@sha256:ac095b8ab9589fcd394702da0809fb3fa844beb04fe909e8df59dc141ef8b63b",
+                            "registry.k8s.io/kube-proxy:v1.30.14"
+                        ],
+                        "sizeBytes": 29213972
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/ingress-nginx/kube-webhook-certgen@sha256:050a34002d5bb4966849c880c56c91f5320372564245733b33d4b3461b4dbd24"
+                        ],
+                        "sizeBytes": 28450888
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/metrics-server/metrics-server@sha256:89258156d0e9af60403eafd44da9676fd66f600c7934d468ccc17e42b199aee2",
+                            "registry.k8s.io/metrics-server/metrics-server:v0.8.0"
+                        ],
+                        "sizeBytes": 22493802
+                    },
+                    {
+                        "names": [
+                            "docker.io/library/busybox@sha256:d82f458899c9696cb26a7c02d5568f81c8c8223f8661bb2a7988b269c8b9051e",
+                            "docker.io/library/busybox:latest"
+                        ],
+                        "sizeBytes": 2223686
+                    },
+                    {
+                        "names": [
+                            "registry.k8s.io/pause@sha256:9001185023633d17a2f98ff69b6ff2615b8ea02a825adffa40422f51dfdcde9d",
+                            "registry.k8s.io/pause:3.8"
+                        ],
+                        "sizeBytes": 311286
+                    }
+                ],
+                "nodeInfo": {
+                    "architecture": "amd64",
+                    "bootID": "d857f1a7-c33c-497e-9e5f-ba15248792a5",
+                    "containerRuntimeVersion": "containerd://1.7.27",
+                    "kernelVersion": "5.14.0-570.26.1.el9_6.x86_64",
+                    "kubeProxyVersion": "v1.30.14",
+                    "kubeletVersion": "v1.30.14",
+                    "machineID": "f9eb588b15e14e7eb4efe3babc6c0634",
+                    "operatingSystem": "linux",
+                    "osImage": "Rocky Linux 9.6 (Blue Onyx)",
+                    "systemUUID": "c99d4d56-4f1b-f5a8-8f7d-7d174e8ca304"
+                }
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}
