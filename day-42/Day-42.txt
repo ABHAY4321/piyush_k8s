@@ -1,0 +1,382 @@
+# pwd ==> /home/abhay/
+# mkdir registry
+# cd registry
+# mkdir certs
+# mkdir auth
+# openssl req -x509 -newkey rsa:4096 -days 365 -nodes -sha256 -keyout certs/tls.key -out certs/tls.crt -subj "/CN=my-registry" -addext "subjectAltName = DNS:my-registry"
+# ls -ltr certs/
+# docker container run --entrypoint htpasswd httpd:2 -Bbn myuser mypasswd > auth/htpasswd
+# ls auth/ ==> htpasswd
+# cat auth/htpasswd
+# find => See directory hirarchy.
+# cd ../
+# pwd ==> /home/abhay/
+# kubectl create secret tls certs-secret --cert=/home/abhay/registry/certs/tls.crt --key=/home/abhay/registry/certs/tls.key
+# kubectl get secrets ==> certs-secret
+# kubectl describe secret certs-secret
+# kubectl create secret generic auth-secret --from-file=/home/abhay/registry/auth/htpasswd
+# kubectl get secrets
+# kubectl describe secret auth-secret
+
+=======================================================================
+========== Scenario 1 (For single replicas in deployment) ============
+=======================================================================
+# vim volume.yml
+=====================================================
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: registry-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+	- ReadWriteOnce
+  hostPath:
+	path: /home/abhay/repos/
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-pvc
+spec:
+  accessModes:
+	- ReadWriteOnce
+  resources:
+	requests:
+	  storage: 1Gi
+====================================================
+# mkdir /home/abhay/repos/
+# kubectl apply -f volume.yml
+# kubectl get pv
+# kubectl get pvc
+# vim deployment.yml
+=========================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  labels:
+    app: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      containers:
+        - name: registry
+          image: registry:2.8.2
+          env:
+            - name: REGISTRY_AUTH
+              value: "htpasswd"
+            - name: REGISTRY_AUTH_HTPASSWD_REALM
+              value: "Registry Realm"
+            - name: REGISTRY_AUTH_HTPASSWD_PATH
+              value: "/auth/htpasswd"
+            - name: REGISTRY_HTTP_TLS_CERTIFICATE
+              value: "/certs/tls.crt"
+            - name: REGISTRY_HTTP_TLS_KEY
+              value: "/certs/tls.key"
+          volumeMounts:
+            - name: repo-vol
+              mountPath: "/var/lib/registry"
+            - name: certs-vol
+              mountPath: "/certs"
+              readOnly: true
+            - name: auth-vol
+              mountPath: "/auth"
+              readOnly: true
+      volumes:
+        - name: repo-vol
+          persistentVolumeClaim:
+            claimName: registry-pvc
+        - name: certs-vol
+          secret:
+            secretName: certs-secret
+        - name: auth-vol
+          secret:
+            secretName: auth-secret
+============================================================
+# kubectl apply -f deployment.yml
+# kubectl get pods
+# vim service.yml
+=============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: docker-registry
+spec:
+  selector:
+	app: registry
+  ports:
+	- port: 5000
+	  targetPort: 5000
+=============================================
+# kubectl apply -f service.yml
+# kubectl get svc
+# kubectl describe svc docker-registry => See Endpoints.
+# kubectl get pods -o wide => These are the endpoints as shown in service.
+# export REGISTRY_NAME="my-registry"
+# kubectl get svc => Service IP is 10.104.226.206
+# export REGISTRY_IP="10.104.226.206"
+# sudo vim /etc/hosts ==> Add this entry in control-plane as well as worker nodes.
+====================================
+10.104.226.206 my-registry
+====================================
+# cat /home/abhay/registry/certs/tls.crt ==> Copy its content.
+==> Remove previously added certificate if any from /usr/local/share/ca-certificates/ and run "sudo update-ca-certificates --fresh". Do this on both control-plane as well as worker nodes.
+
+For Ubuntu:
+# sudo vim /usr/local/share/ca-certificates/tls.crt ==> Paste the copied certificate previously. Do this on both control-plane as well as worker nodes.
+# sudo update-ca-certificates ==> Do this on both control-plane as well as worker nodes.
+
+For Rocky:
+# sudo vim /etc/pki/ca-trust/source/anchors/tls.crt ==> Paste the copied certificate previously. Do this on both control-plane as well as worker nodes.
+# sudo update-ca-trust extract ==> Rebuild the CA trust store. Do this on both control-plane as well as worker nodes.
+# openssl verify -CAfile /etc/pki/tls/certs/ca-bundle.crt /etc/pki/ca-trust/source/anchors/tls.crt ==> /etc/pki/ca-trust/source/anchors/tls.crt: OK ==> Now, your certificate is trusted system-wide. ==> Do this on both control-plane as well as worker nodes.
+
+# sudo mkdir -p /etc/docker/certs.d/my-registry:5000 => Do this on both control-plane as well as worker nodes.
+# sudo cp /home/abhay/registry/certs/tls.crt /etc/docker/certs.d/my-registry:5000 => Do this on both control-plane as well as worker nodes.
+# docker login my-registry:5000 -u myuser -p mypasswd => Login Succeeded. On control plane.
+=========== Testing Time ===========
+# docker image pull nginx:latest
+# docker image ls
+# docker image tag nginx:latest my-registry:5000/mynginx:v1
+# docker image push my-registry:5000/mynginx:v1
+# kubectl get pods
+# kubectl exec -it <pod-name> -- sh
+/ # cd /var/lib/registry/docker/registry/v2/repositories/mynginx/_uploads/
+==> Use CTRL+D to exit.
+# vim new_pod.yml
+=============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nginx-pod
+  name: nginx-pod
+spec:
+  containers:
+    - name: nginx-pod
+	  image: my-registry:5000/mynginx:v1
+	  resources: {}
+  dnsPolicy: ClusterFirst
+  imagePullSecrets:
+    - name: nginx-secret
+  restartPolicy: Always	
+=============================================
+==> If we don't mention "imagePullSecrets", it will give "ErrImagePull" if we describe pod, it shows the issue with authorization as no secret provided here.
+# kubectl create secret docker-registry nginx-secret \
+  --docker-server=my-registry:5000 \
+  --docker-username=myuser \
+  --docker-password=mypasswd
+# kubectl apply -f new_pod.yml
+# kubectl get pods ==> Status: Running
+# kubectl get pods -o wide => To get pod's IP.
+# curl <pod-ip> ==> We can see the web page now.
+
+
+
+=========================================================================
+========== Scenario 2 (For multiple replicas in deployment) ============
+=========================================================================
+==> I am setting up one NFS server which will be used for persistent volume.
+==> NFS server IP: 192.168.154.148.
+==> At NFS server (Rocky Linux 9):
+# dnf install nfs* -y
+# systemctl enable nfs-server.service --now
+# systemctl status nfs-server.service
+# mkdir /nfs
+# chmod 777 /nfs/
+# chown nobody:nobody /nfs/
+# semanage fcontext -a -t public_content_t '/nfs(/.*)?'
+# restorecon -vRF /nfs
+# ls -ldZ /nfs/
+# vim /etc/exports
+==============================================================
+/nfs 192.168.154.0/24(rw,sync,no_subtree_check,no_root_squash)
+==============================================================
+# exportfs -arv
+# systemctl restart nfs-server.service
+# firewall-cmd --permanent --add-service=nfs
+# firewall-cmd --permanent --add-service=mountd
+# firewall-cmd --permanent --add-service=rpc-bind
+# firewall-cmd --reload
+# firewall-cmd --list-all
+
+==> Now we will setup remaining things on k8s cluster.
+# sudo dnf install -y nfs-utils ==> On all worker nodes.
+# vim volume.yml
+=====================================================
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: registry-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    path: /nfs
+    server: 192.168.154.148
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+====================================================
+# mkdir /home/abhay/repos/
+# kubectl apply -f volume.yml
+# kubectl get pv
+# kubectl get pvc
+==> Add a shared secret to all pods:
+# openssl rand -hex 64 ==> ecffcd59a95039bdcf4636e1d47f5a7a80027721f42201adb9200d5dc5c6397c940802e979dd14fecb59ceeb0f3757ed92b005b6f0276eff71aa829b8a70eb74 ==> Copy this secret. Will use it in deployement inside environment.
+# vim deployment.yml
+=================================================================================================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  labels:
+    app: registry
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      containers:
+        - name: registry
+          image: registry:2.8.2
+          env:
+            - name: REGISTRY_AUTH
+              value: "htpasswd"
+            - name: REGISTRY_AUTH_HTPASSWD_REALM
+              value: "Registry Realm"
+            - name: REGISTRY_AUTH_HTPASSWD_PATH
+              value: "/auth/htpasswd"
+            - name: REGISTRY_HTTP_TLS_CERTIFICATE
+              value: "/certs/tls.crt"
+            - name: REGISTRY_HTTP_TLS_KEY
+              value: "/certs/tls.key"
+            - name: REGISTRY_HTTP_SECRET
+              value: "ecffcd59a95039bdcf4636e1d47f5a7a80027721f42201adb9200d5dc5c6397c940802e979dd14fecb59ceeb0f3757ed92b005b6f0276eff71aa829b8a70eb74"
+		  volumeMounts:
+            - name: repo-vol
+              mountPath: "/var/lib/registry"
+            - name: certs-vol
+              mountPath: "/certs"
+              readOnly: true
+            - name: auth-vol
+              mountPath: "/auth"
+              readOnly: true
+      volumes:
+        - name: repo-vol
+          persistentVolumeClaim:
+            claimName: registry-pvc
+        - name: certs-vol
+          secret:
+            secretName: certs-secret
+        - name: auth-vol
+          secret:
+            secretName: auth-secret
+======================================================================================================================================================
+# kubectl apply -f deployment.yml
+# kubectl get pods
+# vim service.yml
+=============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: docker-registry
+spec:
+  selector:
+	app: registry
+  ports:
+	- port: 5000
+	  targetPort: 5000
+=============================================
+# kubectl apply -f service.yml
+# kubectl get svc
+# kubectl describe svc docker-registry => See Endpoints.
+# kubectl get pods -o wide => These are the endpoints as shown in service.
+# export REGISTRY_NAME="my-registry"
+# kubectl get svc => Service IP is 10.104.226.206
+# export REGISTRY_IP="10.104.226.206"
+# sudo vim /etc/hosts ==> Add this entry in control-plane as well as worker nodes.
+====================================
+10.104.226.206 my-registry
+====================================
+# cat /home/abhay/registry/certs/tls.crt ==> Copy its content.
+==> Remove previously added certificate if any from /usr/local/share/ca-certificates/ and run "sudo update-ca-certificates --fresh". Do this on both control-plane as well as worker nodes.
+
+For Ubuntu:
+# sudo vim /usr/local/share/ca-certificates/tls.crt ==> Paste the copied certificate previously. Do this on both control-plane as well as worker nodes.
+# sudo update-ca-certificates ==> Do this on both control-plane as well as worker nodes.
+
+For Rocky:
+# sudo vim /etc/pki/ca-trust/source/anchors/tls.crt ==> Paste the copied certificate previously. Do this on both control-plane as well as worker nodes.
+# sudo update-ca-trust extract ==> Rebuild the CA trust store. Do this on both control-plane as well as worker nodes.
+# openssl verify -CAfile /etc/pki/tls/certs/ca-bundle.crt /etc/pki/ca-trust/source/anchors/tls.crt ==> /etc/pki/ca-trust/source/anchors/tls.crt: OK ==> Now, your certificate is trusted system-wide. ==> Do this on both control-plane as well as worker nodes.
+
+# sudo mkdir -p /etc/docker/certs.d/my-registry:5000 => Do this on both control-plane as well as worker nodes.
+# sudo cp /home/abhay/registry/certs/tls.crt /etc/docker/certs.d/my-registry:5000 => Do this on both control-plane as well as worker nodes.
+# docker login my-registry:5000 -u myuser -p mypasswd => Login Succeeded. On control plane.
+
+=========== Testing Time ===========
+# docker image pull nginx:latest
+# docker image ls
+# docker image tag nginx:latest my-registry:5000/mynginx:v1
+# docker image push my-registry:5000/mynginx:v1
+# kubectl get pods
+# kubectl exec -it <pod-name> -- sh
+/ # cd /var/lib/registry/docker/registry/v2/repositories/mynginx/_uploads/
+==> Use CTRL+D to exit.
+# vim new_pod.yml
+=============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nginx-pod
+  name: nginx-pod
+spec:
+  containers:
+    - name: nginx-pod
+	  image: my-registry:5000/mynginx:v1
+	  resources: {}
+  dnsPolicy: ClusterFirst
+  imagePullSecrets:
+    - name: nginx-secret
+  restartPolicy: Always	
+=============================================
+==> If we don't mention "imagePullSecrets", it will give "ErrImagePull" if we describe pod, it shows the issue with authorization as no secret provided here.
+# kubectl create secret docker-registry nginx-secret \
+  --docker-server=my-registry:5000 \
+  --docker-username=myuser \
+  --docker-password=mypasswd
+# kubectl apply -f new_pod.yml
+# kubectl get pods ==> Status: Running
+# kubectl get pods -o wide => To get pod's IP.
+# curl <pod-ip> ==> We can see the web page now.
+
+============== Bonus ==============
+# curl -u myuser:mypasswd -k https://my-registry:5000/v2/_catalog ==> To check available repositories in this docker registry.
+# curl -u myuser:mypasswd -k https://my-registry:5000/v2/nginx/tags/list ==> To check repositories tags.
