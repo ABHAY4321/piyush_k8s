@@ -1,0 +1,107 @@
+# helm repo add harbor https://helm.goharbor.io
+# helm repo update
+# kubectl create namespace harbor
+# vim harbor-values.yaml
+================================================================
+expose:
+  type: nodePort
+  tls:
+    enabled: false
+  nodePort:
+    name: harbor
+    ports:
+      http:
+        port: 80
+      https:
+        port: 443
+      notary:
+        port: 4443
+
+externalURL: http://harbor.local
+
+harborAdminPassword: "Harbor12345"
+
+persistence:
+  enabled: true
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      accessMode: ReadWriteOnce
+      size: 5Gi
+    chartmuseum:
+      accessMode: ReadWriteOnce
+      size: 2Gi
+    jobservice:
+      accessMode: ReadWriteOnce
+      size: 1Gi
+    database:
+      accessMode: ReadWriteOnce
+      size: 2Gi
+    redis:
+      accessMode: ReadWriteOnce
+      size: 1Gi
+================================================================
+# kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+# kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+# kubectl get storageclass
+=================================================================================================================
+NAME                   PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+local-path (default)   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  32s
+=================================================================================================================
+# helm install harbor harbor/harbor -n harbor -f harbor-values.yaml
+# kubectl get pods -n harbor
+=========================================================================
+NAME                                READY   STATUS    RESTARTS      AGE
+harbor-core-6c76f9759c-hwbqc        1/1     Running   0             2m6s
+harbor-database-0                   1/1     Running   0             2m6s
+harbor-jobservice-c57559f6b-9z29h   1/1     Running   3 (68s ago)   2m6s
+harbor-nginx-76f5ccfc54-vp8p2       1/1     Running   0             2m6s
+harbor-portal-6bd45cbb6-vfjfx       1/1     Running   0             2m6s
+harbor-redis-0                      1/1     Running   0             2m6s
+harbor-registry-674785d69d-grkh7    2/2     Running   0             2m6s
+harbor-trivy-0                      1/1     Running   0             2m6s
+=========================================================================
+# kubectl get pv
+====================================================================================================================================================
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                                    STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-18af49fe-d4b5-4f05-87f4-edf5599f416b   1Gi        RWO            Delete           Bound    harbor/harbor-jobservice                 local-path     <unset>                          16m
+pvc-6444a2ea-680e-4cab-ac07-6a46c0099eb5   2Gi        RWO            Delete           Bound    harbor/database-data-harbor-database-0   local-path     <unset>                          16m
+pvc-6a8a8333-b35f-4ac1-9890-77ec2110ca77   1Gi        RWO            Delete           Bound    harbor/data-harbor-redis-0               local-path     <unset>                          15m
+pvc-70b81505-fabb-48c4-a673-71086257c4d5   5Gi        RWO            Delete           Bound    harbor/harbor-registry                   local-path     <unset>                          16m
+pvc-d54b41bb-0949-4bb5-8a61-3cb069a3db82   5Gi        RWO            Delete           Bound    harbor/data-harbor-trivy-0               local-path     <unset>                          16m
+====================================================================================================================================================
+# kubectl get pvc -n harbor
+====================================================================================================================================================
+NAME                              STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-harbor-redis-0               Bound    pvc-6a8a8333-b35f-4ac1-9890-77ec2110ca77   1Gi        RWO            local-path     <unset>                 2m16s
+data-harbor-trivy-0               Bound    pvc-d54b41bb-0949-4bb5-8a61-3cb069a3db82   5Gi        RWO            local-path     <unset>                 2m16s
+database-data-harbor-database-0   Bound    pvc-6444a2ea-680e-4cab-ac07-6a46c0099eb5   2Gi        RWO            local-path     <unset>                 2m16s
+harbor-jobservice                 Bound    pvc-18af49fe-d4b5-4f05-87f4-edf5599f416b   1Gi        RWO            local-path     <unset>                 2m17s
+harbor-registry                   Bound    pvc-70b81505-fabb-48c4-a673-71086257c4d5   5Gi        RWO            local-path     <unset>                 2m17s
+====================================================================================================================================================
+# kubectl get svc -n harbor
+=========================================================================================
+NAME                TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+harbor              NodePort    10.98.233.72     <none>        80:30002/TCP        5m56s
+harbor-core         ClusterIP   10.96.104.164    <none>        80/TCP              5m56s
+harbor-database     ClusterIP   10.109.36.64     <none>        5432/TCP            5m56s
+harbor-jobservice   ClusterIP   10.102.168.221   <none>        80/TCP              5m56s
+harbor-portal       ClusterIP   10.106.15.199    <none>        80/TCP              5m56s
+harbor-redis        ClusterIP   10.102.113.219   <none>        6379/TCP            5m56s
+harbor-registry     ClusterIP   10.98.213.199    <none>        5000/TCP,8080/TCP   5m56s
+harbor-trivy        ClusterIP   10.96.225.111    <none>        8080/TCP            5m56s
+=========================================================================================
+# hostname -I ==> 192.168.154.130
+==> From web browser, access it using URL: http://192.168.154.130:30002
+==> Username: admin, Password: Harbor12345
+==> Create one new project "demo" in harbor.
+# docker login 192.168.154.130:30002 ==> Login Succeeded.
+==> Username: admin, Password: Harbor12345
+# docker image tag mysql:latest 192.168.154.130:30002/demo/mysql:v1 ==> Use project name here i.e "demo".
+# docker image push 192.168.154.130:30002/demo/mysql:v1
+
+============ Cleanup =================
+# helm uninstall harbor -n harbor
+# kubectl delete pvc --all -n harbor
+# kubectl delete pv --all
+# kubectl delete -f local-path-storage.yaml
