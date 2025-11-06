@@ -1,0 +1,91 @@
+# sudo dnf install helm -y
+# helm version
+# helm --help
+# helm create sample-chart
+# tree sample-chart/
+==================== Setup ArgoCD Using Helm =====================
+# helm repo add argo https://argoproj.github.io/argo-helm
+# helm install my-argo-cd argo/argo-cd --version 9.1.0
+# helm list
+# kubectl get svc
+=======================================================================================================================
+NAME                                          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+docker-registry                               ClusterIP   10.98.52.50      <none>        5000/TCP            4d
+kubernetes                                    ClusterIP   10.96.0.1        <none>        443/TCP             108d
+my-argo-cd-argocd-applicationset-controller   ClusterIP   10.106.94.101    <none>        7000/TCP            5m11s
+my-argo-cd-argocd-dex-server                  ClusterIP   10.105.33.64     <none>        5556/TCP,5557/TCP   5m11s
+my-argo-cd-argocd-redis                       ClusterIP   10.106.172.245   <none>        6379/TCP            5m11s
+my-argo-cd-argocd-repo-server                 ClusterIP   10.100.64.82     <none>        8081/TCP            5m11s
+my-argo-cd-argocd-server                      ClusterIP   10.103.11.54     <none>        80/TCP,443/TCP      5m11s
+=======================================================================================================================
+# kubectl patch svc my-argo-cd-argocd-server -p '{"spec": {"type": "NodePort"}}' ==> Changing to NodePort.
+# kubectl get svc
+=============================================================================================================================
+NAME                                          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+docker-registry                               ClusterIP   10.98.52.50      <none>        5000/TCP                     4d
+kubernetes                                    ClusterIP   10.96.0.1        <none>        443/TCP                      108d
+my-argo-cd-argocd-applicationset-controller   ClusterIP   10.106.94.101    <none>        7000/TCP                     9m1s
+my-argo-cd-argocd-dex-server                  ClusterIP   10.105.33.64     <none>        5556/TCP,5557/TCP            9m1s
+my-argo-cd-argocd-redis                       ClusterIP   10.106.172.245   <none>        6379/TCP                     9m1s
+my-argo-cd-argocd-repo-server                 ClusterIP   10.100.64.82     <none>        8081/TCP                     9m1s
+my-argo-cd-argocd-server                      NodePort    10.103.11.54     <none>        80:31170/TCP,443:32012/TCP   9m1s
+=============================================================================================================================
+# hostname -I ==> 192.168.154.151.
+==> Access using web browser: http://192.168.154.151:31170
+==> Defauly username: admin
+# kubectl get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d ==> To get the password.
+# helm list
+====================================================================================================================================
+NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART           APP VERSION
+my-argo-cd      default         1               2025-11-06 16:13:21.0542489 +0530 IST   deployed        argo-cd-9.1.0   v3.2.0
+====================================================================================================================================
+# helm upgrade my-argo-cd argo/argo-cd
+# helm list
+====================================================================================================================================
+NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART           APP VERSION
+my-argo-cd      default         2               2025-11-06 16:31:07.516475466 +0530 IST deployed        argo-cd-9.1.0   v3.2.0
+====================================================================================================================================
+# helm rollback my-argo-cd
+# helm list
+====================================================================================================================================
+NAME            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART           APP VERSION
+my-argo-cd      default         3               2025-11-06 16:35:17.045036373 +0530 IST deployed        argo-cd-9.1.0   v3.2.0
+====================================================================================================================================
+# helm search hub argo-cd
+# helm search repo argo-cd
+# helm uninstall my-argo-cd
+# helm list
+=========================== Download ArgoCD Locally and Install =======================================
+# helm pull argo/argo-cd
+# ls ==> argo-cd-9.1.0.tgz
+# tar -xvf argo-cd-9.1.0.tgz
+# ls ==> argo-cd
+# helm install my-argo-cd ./argo-cd
+# helm list
+# kubectl get svc
+=================================================================================================================
+NAME                                          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+docker-registry                               ClusterIP   10.98.52.50      <none>        5000/TCP            4d
+kubernetes                                    ClusterIP   10.96.0.1        <none>        443/TCP             108d
+my-argo-cd-argocd-applicationset-controller   ClusterIP   10.99.171.53     <none>        7000/TCP            10s
+my-argo-cd-argocd-dex-server                  ClusterIP   10.103.241.11    <none>        5556/TCP,5557/TCP   10s
+my-argo-cd-argocd-redis                       ClusterIP   10.106.102.84    <none>        6379/TCP            10s
+my-argo-cd-argocd-repo-server                 ClusterIP   10.111.142.247   <none>        8081/TCP            10s
+my-argo-cd-argocd-server                      ClusterIP   10.100.194.82    <none>        80/TCP,443/TCP      10s
+=================================================================================================================
+# kubectl patch svc my-argo-cd-argocd-server -p '{"spec": {"type": "NodePort"}}'
+# kubectl get svc
+==========================================================================================================================
+NAME                                          TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+docker-registry                               ClusterIP   10.98.52.50      <none>        5000/TCP                     4d
+kubernetes                                    ClusterIP   10.96.0.1        <none>        443/TCP                      108d
+my-argo-cd-argocd-applicationset-controller   ClusterIP   10.99.171.53     <none>        7000/TCP                     27s
+my-argo-cd-argocd-dex-server                  ClusterIP   10.103.241.11    <none>        5556/TCP,5557/TCP            27s
+my-argo-cd-argocd-redis                       ClusterIP   10.106.102.84    <none>        6379/TCP                     27s
+my-argo-cd-argocd-repo-server                 ClusterIP   10.111.142.247   <none>        8081/TCP                     27s
+my-argo-cd-argocd-server                      NodePort    10.100.194.82    <none>        80:31661/TCP,443:32133/TCP   27s
+===========================================================================================================================
+# hostname -I ==> 192.168.154.151.
+==> Access using web browser: http://192.168.154.151:31661
+==> Defauly username: admin
+# kubectl get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d ==> To get the password.
