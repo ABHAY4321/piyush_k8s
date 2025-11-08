@@ -1,0 +1,389 @@
+# pwd ==> /home/abhay/piyush_k8s/day-44
+# mkdir kustomize-nginx
+# mkdir kustomize-nginx/base
+# mkdir kustomize-nginx/overlays
+# mkdir kustomize-nginx/overlays/dev
+# mkdir kustomize-nginx/overlays/test
+# mkdir kustomize-nginx/overlays/prod
+
+===================== Creating Base Environment to Use in Other Environments =======================
+# pwd ==> /home/abhay/piyush_k8s/day-44
+# cd kustomize-nginx/base/
+# vim deployment.yaml
+=================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-config
+=======================================================
+# vim service.yaml
+=======================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: nginx
+  type: ClusterIP
+=======================================================
+# vim index.html
+=======================================================
+<!DOCTYPE html>
+<html>
+<head>
+<title>Base Nginx Application</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to Base Nginx Application</h1>
+<p>This is the default configuration.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using Base Nginx Application.</em></p>
+</body>
+</html>
+=======================================================
+# vim kustomization.yaml
+=======================================================
+resources:
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: nginx-config
+    files:
+      - index.html
+=======================================================
+
+
+===================== Setting Up Development Environment =======================
+# pwd ==> /home/abhay/piyush_k8s/day-44
+# cd kustomize-nginx/overlays/dev/
+# vim replicas.yml
+============================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 1
+============================
+# vim limits.yaml
+================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: nginx
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "200m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+================================
+# vim index.html
+==============================================================================
+<!DOCTYPE html>
+<html>
+<head>
+<title>Development Environment</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Development Environment</h1>
+<p>This is the development configuration of our Nginx Application.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using Development Nginx Application.</em></p>
+</body>
+</html>
+==============================================================================
+# vim kustomization.yaml
+===========================
+namePrefix: dev-
+namespace: dev
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: nginx-config
+    behavior: replace
+    files:
+      - index.html
+
+patches:
+  - path: replicas.yaml
+  - path: limits.yaml
+===========================
+# kubectl kustomize . ==> Verify it before applying.
+# kubectl create ns dev
+# kubectl kustomize . | kubectl apply -f -
+# kubectl get pods
+# kubectl get svc
+# curl <cluster-ip> ==> Access the webpage. We can't access it from browser as service type is 'ClusterIP' inside base 'service.yaml' file.
+==> Done with testing. Now its time to clean up.
+# kubectl kustomize . | kubectl delete -f -
+
+===================== Setting Up Testing Environment =======================
+# pwd ==> /home/abhay/piyush_k8s/day-44
+==> This time we want to access the app from browser. So the 'service.yaml' needs to be modified inside base.
+# cd kustomize-nginx/base/
+# vim service.yaml
+===============================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30001
+      protocol: TCP
+  selector:
+    app: nginx
+  type: NodePort
+=============================
+# cd ../../overlays/test/
+# vim replicas.yaml
+============================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+============================
+# vim limits.yaml
+=======================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: nginx
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "300m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+=======================================
+# vim index.html
+=================================================================
+<!DOCTYPE html>
+<html>
+<head>
+<title>Test Environment</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Test Environment</h1>
+<p>This is the test configuration of our Nginx Application.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using Test Nginx Application.</em></p>
+</body>
+</html>
+===================================================================
+# vim kustomization.yaml
+===========================
+namePrefix: test-
+namespace: test
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: nginx-config
+    behavior: replace
+    files:
+      - index.html
+
+patches:
+  - path: replicas.yaml
+  - path: limits.yaml
+===========================
+# kubectl kustomize . ==> Verify it before applying.
+# kubectl create ns test
+# kubectl kustomize . | kubectl apply -f -
+# kubectl get pods
+# kubectl get svc
+==> Use URL: http://<node-ip>:30001 ==> URL will be accessible now.
+==> Done with testing. Now its time to clean up.
+# kubectl kustomize . | kubectl delete -f -
+
+
+===================== Setting Up Production Environment =======================
+# pwd ==> /home/abhay/piyush_k8s/day-44
+==> This time we want to access the app from browser. So the 'service.yaml' needs to be modified inside base.
+# cd kustomize-nginx/base/
+# vim service.yaml
+===============================
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30001
+      protocol: TCP
+  selector:
+    app: nginx
+  type: NodePort
+=============================
+# cd ../../overlays/prod/
+# vim replicas.yaml
+============================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+============================
+# vim limits.yaml
+=================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: nginx
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "200m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+=================================
+# vim index.html
+========================================================================
+<!DOCTYPE html>
+<html>
+<head>
+<title>Production Environment</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Production Environment</h1>
+<p>This is the production configuration of our Nginx Application.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using Production Nginx Application.</em></p>
+</body>
+</html>
+==========================================================================
+# vim kustomization.yaml
+==========================
+namePrefix: prod-
+namespace: prod
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: nginx-config
+    behavior: replace
+    files:
+      - index.html
+
+patches:
+  - path: replicas.yaml
+  - path: limits.yaml
+==========================
+# kubectl kustomize . ==> Verify it before applying.
+# kubectl create ns test
+# kubectl kustomize . | kubectl apply -f -
+# kubectl get pods
+# kubectl get svc
+==> Use URL: http://<node-ip>:30001 ==> URL will be accessible now.
+==> Done with testing. Now its time to clean up.
+# kubectl kustomize . | kubectl delete -f -
+

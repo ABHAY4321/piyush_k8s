@@ -1,0 +1,14 @@
+namePrefix: prod-
+namespace: prod
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: nginx-config
+    behavior: replace
+    files:
+      - index.html
+
+patches:
+  - path: replicas.yaml
+  - path: limits.yaml
