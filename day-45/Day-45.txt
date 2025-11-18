@@ -1,0 +1,237 @@
+# kubectl get nodes
+=========================================================================
+NAME                            STATUS   ROLES           AGE    VERSION
+k8s-rocky-master.cricbuzz.net   Ready    control-plane   120d   v1.30.14
+k8s-rocky-node1.cricbuzz.net    Ready    <none>          120d   v1.30.14
+k8s-rocky-node2.cricbuzz.net    Ready    <none>          120d   v1.30.14
+=========================================================================
+# ssh abhay@node1
+# sudo mkdir -p /mnt/data/mongodb-{0..4}
+# sudo chmod 777 /mnt/data/mongodb-{0..4}
+# ls -ltr /mnt/data/
+# exit
+# ssh abhay@node2
+# sudo mkdir -p /mnt/data/mongodb-{0..4}
+# sudo chmod 777 /mnt/data/mongodb-{0..4}
+# ls -ltr /mnt/data/
+# exit
+# vim mongodb-service.yaml
+==========================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  labels:
+    app: mongodb
+spec:
+  clusterIP: None  # This makes it a headless service
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+==========================================================
+# kubectl apply -f mongodb-service.yaml
+# kubectl get svc
+===========================================================================
+NAME              TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)     AGE
+kubernetes        ClusterIP   10.96.0.1    <none>        443/TCP     120d
+mongodb-service   ClusterIP   None         <none>        27017/TCP   3s
+===========================================================================
+# vim mongodb-storageclass.yaml
+======================================================================
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mongodb-sc
+provisioner: kubernetes.io/no-provisioner  # No dynamic provisioning
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+=======================================================================
+# kubectl apply -f mongodb-storageclass.yaml
+# kubectl get sc
+===============================================================================================================
+NAME         PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+mongodb-sc   kubernetes.io/no-provisioner   Retain          WaitForFirstConsumer   false                  5s
+===============================================================================================================
+# vim mongodb-pv.yaml
+===============================================
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mongodb-0
+  labels:
+    type: local
+spec:
+  storageClassName: mongodb-sc
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mongodb-0"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mongodb-1
+  labels:
+    type: local
+spec:
+  storageClassName: mongodb-sc
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mongodb-1"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mongodb-2
+  labels:
+    type: local
+spec:
+  storageClassName: mongodb-sc
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mongodb-2"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mongodb-3
+  labels:
+    type: local
+spec:
+  storageClassName: mongodb-sc
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mongodb-3"
+  persistentVolumeReclaimPolicy: Retain
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mongodb-4
+  labels:
+    type: local
+spec:
+  storageClassName: mongodb-sc
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/mongodb-4"
+  persistentVolumeReclaimPolicy: Retain
+=========================================================
+# kubectl apply -f mongodb-pv.yaml
+# kubectl get pv
+====================================================================================================================================
+NAME           CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM   STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pv-mongodb-0   1Gi        RWO            Retain           Available           mongodb-sc     <unset>                          3m35s
+pv-mongodb-1   1Gi        RWO            Retain           Available           mongodb-sc     <unset>                          3m35s
+pv-mongodb-2   1Gi        RWO            Retain           Available           mongodb-sc     <unset>                          3m35s
+pv-mongodb-3   1Gi        RWO            Retain           Available           mongodb-sc     <unset>                          3m35s
+pv-mongodb-4   1Gi        RWO            Retain           Available           mongodb-sc     <unset>                          3m35s
+====================================================================================================================================
+# vim mongodb-statefulset.yaml
+==================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+spec:
+  serviceName: "mongodb-service"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:4.4
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "mongodb-sc"
+      resources:
+        requests:
+          storage: 1Gi
+=====================================================
+# kubectl apply -f mongodb-statefulset.yaml
+# kubectl get pods -o wide -w
+# kubectl get pods -o wide
+# kubectl get pvc
+================================================================================================================
+NAME             STATUS   VOLUME         CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-mongodb-0   Bound    pv-mongodb-0   1Gi        RWO            mongodb-sc     <unset>                 9m35s
+data-mongodb-1   Bound    pv-mongodb-4   1Gi        RWO            mongodb-sc     <unset>                 8m6s
+data-mongodb-2   Bound    pv-mongodb-1   1Gi        RWO            mongodb-sc     <unset>                 6m35s
+================================================================================================================
+# kubectl get pv
+===================================================================================================================================================
+NAME           CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                    STORAGECLASS   VOLUMEATTRIBUTESCLASS   REASON   AGE
+pv-mongodb-0   1Gi        RWO            Retain           Bound       default/data-mongodb-0   mongodb-sc     <unset>                          15m
+pv-mongodb-1   1Gi        RWO            Retain           Bound       default/data-mongodb-2   mongodb-sc     <unset>                          15m
+pv-mongodb-2   1Gi        RWO            Retain           Available                            mongodb-sc     <unset>                          15m
+pv-mongodb-3   1Gi        RWO            Retain           Available                            mongodb-sc     <unset>                          15m
+pv-mongodb-4   1Gi        RWO            Retain           Bound       default/data-mongodb-1   mongodb-sc     <unset>                          15m
+===================================================================================================================================================
+# kubectl exec -it mongodb-0 -- mongo
+================================================================
+use testdb
+db.users.insert({name: "user1", email: "user1@example.com"})
+db.users.insert({name: "user2", email: "user2@example.com"})
+db.users.find()
+exit
+================================================================
+# kubectl delete pod mongodb-0
+# kubectl get pods
+# kubectl exec -it mongodb-0 -- mongo
+====================
+use testdb
+db.users.find()
+exit
+====================
+# kubectl scale statefulset mongodb --replicas=5
+# kubectl get pods -o wide -w
+# kubectl get pods -o wide
+# kubectl get pvc
+===============================================================================================================
+NAME             STATUS   VOLUME         CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+data-mongodb-0   Bound    pv-mongodb-0   1Gi        RWO            mongodb-sc     <unset>                 17m
+data-mongodb-1   Bound    pv-mongodb-4   1Gi        RWO            mongodb-sc     <unset>                 15m
+data-mongodb-2   Bound    pv-mongodb-1   1Gi        RWO            mongodb-sc     <unset>                 14m
+data-mongodb-3   Bound    pv-mongodb-2   1Gi        RWO            mongodb-sc     <unset>                 35s
+data-mongodb-4   Bound    pv-mongodb-3   1Gi        RWO            mongodb-sc     <unset>                 31s
+===============================================================================================================
+
+=================== Cleanup ====================
+# kubectl delete statefulset mongodb
+# kubectl delete svc mongodb-service
+# kubectl delete pvc --all
+# kubectl delete pv --all
+# kubectl delete sc mongodb-sc
