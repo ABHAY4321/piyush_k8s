@@ -1,0 +1,189 @@
+# kubectl get priorityclasses (OR) kubectl get pc
+==============================================================
+NAME                      VALUE        GLOBAL-DEFAULT   AGE
+system-cluster-critical   2000000000   false            125d
+system-node-critical      2000001000   false            125d
+==============================================================
+# vim high-priority.yaml
+===========================================================================
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+value: 1000000
+globalDefault: false
+description: "This priority class should be used for high-priority pods."
+===========================================================================
+# vim medium-priority.yaml
+===========================================================================
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: medium-priority
+value: 10000
+globalDefault: false
+description: "This priority class should be used for medium-priority pods."
+===========================================================================
+# vim low-priority.yaml
+===========================================================================
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: low-priority
+value: 1000
+globalDefault: true
+description: "This priority class should be used for low-priority pods."
+===========================================================================
+# kubectl apply -f high-priority.yaml
+# kubectl apply -f medium-priority.yaml
+# kubectl apply -f low-priority.yaml
+# kubectl get priorityclasses (OR) kubectl get pc
+==============================================================
+NAME                      VALUE        GLOBAL-DEFAULT   AGE
+high-priority             1000000      false            43m
+low-priority              1000         true             43m
+medium-priority           10000        false            43m
+system-cluster-critical   2000000000   false            125d
+system-node-critical      2000001000   false            125d
+==============================================================
+# vim high-priority-pod.yaml
+========================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: high-priority-nginx
+spec:
+  containers:
+    - name: nginx
+      image: nginx:latest
+      resources:
+        requests:
+          memory: "128Mi"
+          cpu: "500m"
+  priorityClassName: high-priority
+=========================================
+# vim medium-priority-pod.yaml
+=========================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: medium-priority-nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "500m"
+  priorityClassName: medium-priority
+=========================================
+# vim low-priority-pod.yaml
+=========================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: low-priority-nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "500m"
+  priorityClassName: low-priority
+==========================================
+# kubectl apply -f low-priority-pod.yaml
+# kubectl apply -f medium-priority-pod.yaml
+# kubectl apply -f high-priority-pod.yaml
+# kubectl get pods
+# kubectl describe pod low-priority-nginx ==> See priority class.
+# kubectl describe pod medium-priority-nginx ==> See priority class.
+# kubectl describe pod high-priority-nginx ==> See priority class.
+# vim resource-hog.yaml
+==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource-hog
+  labels:
+    app: resource-hog
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: resource-hog
+  template:
+    metadata:
+      labels:
+        app: resource-hog
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+      priorityClassName: low-priority
+==========================================
+# kubectl apply -f resource-hog.yaml
+# kubectl get pods
+===================================================================
+NAME                            READY   STATUS    RESTARTS   AGE
+resource-hog-57c5d7b84d-5svhl   1/1     Running   0          3m18s
+resource-hog-57c5d7b84d-bn25p   1/1     Running   0          3m18s
+resource-hog-57c5d7b84d-f4cl2   1/1     Running   0          3m18s
+resource-hog-57c5d7b84d-r9v8z   1/1     Running   0          3m18s
+resource-hog-57c5d7b84d-rg8vm   1/1     Running   0          3m18s
+===================================================================
+# vim critical-pod.yaml
+=====================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: critical-nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+  priorityClassName: high-priority
+======================================
+# kubectl apply -f critical-pod.yaml
+# kubectl get pods -o wide -w
+# kubectl get pods
+===================================================================
+NAME                            READY   STATUS    RESTARTS   AGE
+critical-nginx                  1/1     Running   0          13s
+resource-hog-57c5d7b84d-5svhl   0/1     Pending   0          5m18s
+resource-hog-57c5d7b84d-bn25p   0/1     Pending   0          5m18s
+resource-hog-57c5d7b84d-f4cl2   0/1     Pending   0          5m18s
+resource-hog-57c5d7b84d-r9v8z   0/1     Pending   0          5m18s
+resource-hog-57c5d7b84d-rg8vm   0/1     Pending   0          5m18s
+===================================================================
+# kubectl get events --sort-by=.metadata.creationTimestamp
+# kubectl delete -f critical-pod.yaml
+# kubectl get pods
+===================================================================
+NAME                            READY   STATUS    RESTARTS   AGE
+resource-hog-57c5d7b84d-5svhl   1/1     Running   0          7m18s
+resource-hog-57c5d7b84d-bn25p   1/1     Running   0          7m18s
+resource-hog-57c5d7b84d-f4cl2   1/1     Running   0          7m18s
+resource-hog-57c5d7b84d-r9v8z   1/1     Running   0          7m18s
+resource-hog-57c5d7b84d-rg8vm   1/1     Running   0          7m18s
+===================================================================
+
+================== Cleanup =====================
+# kubectl delete -f high-priority-pod.yaml
+# kubectl delete -f medium-priority-pod.yaml
+# kubectl delete -f low-priority-pod.yaml
+# kubectl delete -f resource-hog.yaml
+# kubectl delete -f critical-pod.yaml
+# kubectl delete -f high-priority.yaml
+# kubectl delete -f medium-priority.yaml
+# kubectl delete -f low-priority.yaml
